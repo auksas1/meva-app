@@ -1,4 +1,7 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import Optional
 
 from pydantic import BaseModel
 
@@ -12,7 +15,7 @@ class DamageZone(BaseModel):
 class AnalysisResponse(BaseModel):
     id: int
     image_filename: str
-    damage_score: float | None
+    damage_score: Optional[float]
     damage_zones: list[DamageZone]
     status: str
     created_at: datetime
