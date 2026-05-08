@@ -1,24 +1,25 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import HomeScreen from '../screens/HomeScreen';
-
-export type RootStackParamList = {
-  Home: undefined;
-};
-
-const Stack = createNativeStackNavigator<RootStackParamList>();
+import MainTabs from './MainTabs';
+import { SelectedPhotosProvider } from '../state/selectedPhotos';
+import { hydrateSettings } from '../services/storage';
+import { migrateLegacySessions } from '../services/historyStorage';
 
 export default function AppNavigator() {
+  useEffect(() => {
+    hydrateSettings().catch(() => {
+      // Fall back to default URL silently if AsyncStorage read fails.
+    });
+    migrateLegacySessions().catch(() => {
+      // Migration failure shouldn't crash the app.
+    });
+  }, []);
+
   return (
-    <NavigationContainer>
-      <Stack.Navigator initialRouteName="Home">
-        <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{ title: 'AutoDamage' }}
-        />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <SelectedPhotosProvider>
+      <NavigationContainer>
+        <MainTabs />
+      </NavigationContainer>
+    </SelectedPhotosProvider>
   );
 }
