@@ -5,12 +5,44 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models.analysis import Analysis
-from app.schemas.analysis import AnalysisResponse
+from app.schemas.analysis import AnalysisListResponse, AnalysisResponse
 from app.services.ai_service import run_inference
 
 router = APIRouter(prefix="/analysis", tags=["analysis"])
 
 _MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+@router.get("/", response_model=AnalysisListResponse)
+def list_analyses(
+    skip: int = 0,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+):
+    total = db.query(Analysis).count()
+    records = (
+        db.query(Analysis)
+        .order_by(Analysis.created_at.desc(), Analysis.id.desc())
+        .offset(skip)
+        .limit(limit)
+        .all()
+    )
+    items = []
+    for record in records:
+        damage_zones = json.loads(record.damage_zones) if record.damage_zones else []
+        affected_parts = json.loads(record.affected_parts) if record.affected_parts else None
+        items.append(AnalysisResponse(
+            id=record.id,
+            image_filename=record.image_filename,
+            damage_score=record.damage_score,
+            damage_zones=damage_zones,
+            affected_parts=affected_parts,
+            total_estimated_cost=record.total_estimated_cost,
+            repair_recommendation=record.repair_recommendation,
+            status=record.status,
+            created_at=record.created_at,
+        ))
+    return AnalysisListResponse(items=items, total=total)
 
 
 @router.post("/analyze", response_model=AnalysisResponse)

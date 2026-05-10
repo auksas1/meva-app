@@ -17,6 +17,11 @@ class AffectedPart(BaseModel):
     estimated_cost: Optional[float] = None
 
 
+class AnalysisListResponse(BaseModel):
+    items: list["AnalysisResponse"]
+    total: int
+
+
 class AnalysisResponse(BaseModel):
     id: int
     image_filename: str

@@ -183,3 +183,51 @@ class TestGetAnalysisEndpoint:
     def test_non_integer_id_returns_422(self, client):
         response = client.get("/analysis/abc")
         assert response.status_code == 422
+
+
+# ---------------------------------------------------------------------------
+# GET /analysis/
+# ---------------------------------------------------------------------------
+
+class TestListAnalysesEndpoint:
+    def _post(self, client) -> int:
+        response = client.post(
+            "/analysis/analyze",
+            files={"file": ("car.png", io.BytesIO(_minimal_png()), "image/png")},
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    def test_empty_returns_zero_total(self, client):
+        response = client.get("/analysis/")
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 0
+        assert body["items"] == []
+
+    def test_returns_all_items_and_correct_total(self, client):
+        self._post(client)
+        self._post(client)
+        response = client.get("/analysis/")
+        body = response.json()
+        assert body["total"] == 2
+        assert len(body["items"]) == 2
+
+    def test_ordered_newest_first(self, client):
+        id1 = self._post(client)
+        id2 = self._post(client)
+        body = client.get("/analysis/").json()
+        assert body["items"][0]["id"] == id2
+        assert body["items"][1]["id"] == id1
+
+    def test_pagination_skip_and_limit(self, client):
+        for _ in range(5):
+            self._post(client)
+        body = client.get("/analysis/?skip=2&limit=2").json()
+        assert body["total"] == 5
+        assert len(body["items"]) == 2
+
+    def test_limit_beyond_total_returns_remaining(self, client):
+        self._post(client)
+        body = client.get("/analysis/?limit=100").json()
+        assert len(body["items"]) == 1
