@@ -10,12 +10,6 @@ from sqlalchemy.pool import StaticPool
 from app.database import Base, get_db
 from app.main import app
 
-# ---------------------------------------------------------------------------
-# In-memory test database — isolated from meva.db
-# StaticPool forces all connections to share one in-memory SQLite instance,
-# so create_all() and the test sessions see the same database.
-# ---------------------------------------------------------------------------
-
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
 test_engine = create_engine(
@@ -36,7 +30,6 @@ def override_get_db():
 
 @pytest.fixture(autouse=True)
 def setup_db():
-    """Create tables before each test, drop them after."""
     Base.metadata.create_all(bind=test_engine)
     yield
     Base.metadata.drop_all(bind=test_engine)
@@ -50,20 +43,16 @@ def client():
     app.dependency_overrides.clear()
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _minimal_png() -> bytes:
     """Return the smallest valid 1×1 PNG (67 bytes)."""
     return (
-        b"\x89PNG\r\n\x1a\n"           # PNG signature
-        b"\x00\x00\x00\rIHDR"          # IHDR chunk length + type
-        b"\x00\x00\x00\x01"            # width = 1
-        b"\x00\x00\x00\x01"            # height = 1
-        b"\x08\x02"                    # bit depth 8, color type RGB
-        b"\x00\x00\x00"               # compression, filter, interlace
-        b"\x90wS\xde"                  # IHDR CRC
+        b"\x89PNG\r\n\x1a\n"
+        b"\x00\x00\x00\rIHDR"
+        b"\x00\x00\x00\x01"
+        b"\x00\x00\x00\x01"
+        b"\x08\x02"
+        b"\x00\x00\x00"
+        b"\x90wS\xde"
         b"\x00\x00\x00\x0cIDATx\x9cc\xf8\x0f\x00\x00\x01\x01\x00\x05\x18\xd8N"
         b"\x00\x00\x00\x00IEND\xaeB`\x82"
     )
@@ -108,13 +97,23 @@ class TestAnalyzeEndpoint:
             assert "bbox" in zone
             assert len(zone["bbox"]) == 4
 
+    def test_optional_fields_present(self, client):
+        response = client.post(
+            "/analysis/analyze",
+            files={"file": ("car.png", io.BytesIO(_minimal_png()), "image/png")},
+        )
+        body = response.json()
+        assert isinstance(body["affected_parts"], list)
+        assert len(body["affected_parts"]) > 0
+        assert isinstance(body["total_estimated_cost"], (int, float))
+        assert isinstance(body["repair_recommendation"], str)
+
     def test_result_is_persisted(self, client):
         post_response = client.post(
             "/analysis/analyze",
             files={"file": ("car.png", io.BytesIO(_minimal_png()), "image/png")},
         )
         analysis_id = post_response.json()["id"]
-
         get_response = client.get(f"/analysis/{analysis_id}")
         assert get_response.status_code == 200
         assert get_response.json()["id"] == analysis_id
@@ -132,6 +131,14 @@ class TestAnalyzeEndpoint:
             files={"file": ("notes.txt", io.BytesIO(b"hello"), "text/plain")},
         )
         assert response.status_code == 400
+
+    def test_oversized_file_returns_413(self, client):
+        big_payload = b"\x00" * (10 * 1024 * 1024 + 1)
+        response = client.post(
+            "/analysis/analyze",
+            files={"file": ("big.png", io.BytesIO(big_payload), "image/png")},
+        )
+        assert response.status_code == 413
 
 
 # ---------------------------------------------------------------------------
@@ -160,6 +167,14 @@ class TestGetAnalysisEndpoint:
         )
         response = client.get("/analysis/1")
         assert response.json()["image_filename"] == "mycar.png"
+
+    def test_optional_fields_persisted(self, client):
+        analysis_id = self._create_analysis(client)
+        response = client.get(f"/analysis/{analysis_id}")
+        body = response.json()
+        assert isinstance(body["affected_parts"], list)
+        assert isinstance(body["total_estimated_cost"], (int, float))
+        assert isinstance(body["repair_recommendation"], str)
 
     def test_missing_id_returns_404(self, client):
         response = client.get("/analysis/9999")

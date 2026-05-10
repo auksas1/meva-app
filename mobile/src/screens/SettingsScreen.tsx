@@ -100,6 +100,7 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'ok' | 'failed' | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -143,16 +144,10 @@ export default function SettingsScreen() {
 
   const handleCheckConnection = async () => {
     setChecking(true);
+    setConnectionStatus(null);
     try {
       const ok = await healthCheck();
-      if (ok) {
-        Alert.alert('Connection OK', 'Backend connected successfully.');
-      } else {
-        Alert.alert(
-          'Connection failed',
-          'Could not connect to backend. Check URL or make sure backend is running.',
-        );
-      }
+      setConnectionStatus(ok ? 'ok' : 'failed');
     } finally {
       setChecking(false);
     }
@@ -248,6 +243,16 @@ export default function SettingsScreen() {
         style={styles.input}
       />
       <Text style={styles.helper}>Currently using: {savedUrl}</Text>
+      {connectionStatus === 'ok' && (
+        <Text style={[styles.helper, { color: '#2a9d2a', marginTop: 8 }]}>
+          ✓ Backend connected successfully
+        </Text>
+      )}
+      {connectionStatus === 'failed' && (
+        <Text style={[styles.helper, { color: '#d12f2f', marginTop: 8 }]}>
+          ✗ Could not connect — check URL or make sure backend is running
+        </Text>
+      )}
 
       <View style={styles.row}>
         <TouchableOpacity
