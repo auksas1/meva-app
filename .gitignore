@@ -223,3 +223,7 @@ dist/
 
 # Logs
 *.log
+
+# Project-specific
+*.pdf
+CLAUDE.md

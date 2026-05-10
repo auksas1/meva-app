@@ -1,5 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AnalysisSession, AnalyzedPhoto, RepairRecord } from '../types/analysis';
+import type { AnalysisResponse } from './api';
+import { listAnalysesForVehicle, patchAnalysis } from './api';
 import { createVehicle, getVehicles } from './vehicleStorage';
 
 const KEY = 'meva.history';
@@ -39,8 +41,28 @@ export async function getSession(id: string): Promise<AnalysisSession | null> {
 }
 
 export async function getSessionsForVehicle(vehicleId: string): Promise<AnalysisSession[]> {
-  const all = await getSessions();
-  return all.filter((s) => s.vehicleId === vehicleId);
+  const localSessions = (await getSessions()).filter((s) => s.vehicleId === vehicleId);
+
+  // Also fetch backend analyses for this vehicle and surface any not already in a local session.
+  try {
+    const backendAnalyses = await listAnalysesForVehicle(Number(vehicleId));
+    const localAnalysisIds = new Set(
+      localSessions.flatMap((s) => s.photos.map((p) => p.result.id)),
+    );
+    const orphans = backendAnalyses
+      .filter((a) => !localAnalysisIds.has(a.id))
+      .map((a): AnalysisSession => ({
+        id: String(a.id),
+        vehicleId,
+        createdAt: a.created_at,
+        photos: [{ localUri: '', result: a }],
+      }));
+    return [...localSessions, ...orphans].sort(
+      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
+  } catch {
+    return localSessions;
+  }
 }
 
 export async function saveSession(
@@ -56,6 +78,15 @@ export async function saveSession(
   const existing = await getSessions();
   const next = [session, ...existing].slice(0, MAX_SESSIONS);
   await writeAll(next);
+
+  // Link each backend analysis to this vehicle (best-effort, fire-and-forget).
+  const vehicleIdNum = Number(vehicleId);
+  if (!Number.isNaN(vehicleIdNum)) {
+    for (const photo of photos) {
+      patchAnalysis(photo.result.id, { vehicle_id: vehicleIdNum }).catch(() => {});
+    }
+  }
+
   return session;
 }
 

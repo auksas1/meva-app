@@ -13,6 +13,7 @@ export type AffectedPart = {
 
 export type AnalysisResponse = {
   id: number;
+  vehicle_id?: number | null;
   image_filename: string;
   damage_score: number;
   damage_zones: DamageZone[];
@@ -68,6 +69,7 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
           : null) ?? `Request failed with status ${res.status}`;
       throw new ApiError(message, res.status, detail);
     }
+    if (res.status === 204) return undefined as T;
     return (await res.json()) as T;
   } catch (err) {
     if (err instanceof ApiError) throw err;
@@ -102,6 +104,74 @@ export async function uploadImage(uri: string): Promise<AnalysisResponse> {
 export async function getAnalysis(id: number): Promise<AnalysisResponse> {
   return request<AnalysisResponse>(`/analysis/${id}`);
 }
+
+export async function patchAnalysis(id: number, data: { vehicle_id?: number | null }): Promise<AnalysisResponse> {
+  return request<AnalysisResponse>(`/analysis/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function listAnalysesForVehicle(vehicleId: number): Promise<AnalysisResponse[]> {
+  const res = await request<{ items: AnalysisResponse[]; total: number }>(
+    `/analysis/?vehicle_id=${vehicleId}&limit=200`,
+  );
+  return res.items;
+}
+
+// --- Vehicles ---
+
+export type VehicleApiResponse = {
+  id: number;
+  brand?: string | null;
+  model?: string | null;
+  year?: number | null;
+  license_plate?: string | null;
+  notes?: string | null;
+  created_at: string;
+};
+
+export type VehiclePayload = {
+  brand?: string;
+  model?: string;
+  year?: number;
+  license_plate?: string;
+  notes?: string;
+};
+
+export async function listVehicles(skip = 0, limit = 200): Promise<VehicleApiResponse[]> {
+  const res = await request<{ items: VehicleApiResponse[]; total: number }>(
+    `/vehicles/?skip=${skip}&limit=${limit}`,
+  );
+  return res.items;
+}
+
+export async function getVehicleById(id: number): Promise<VehicleApiResponse> {
+  return request<VehicleApiResponse>(`/vehicles/${id}`);
+}
+
+export async function createVehicleApi(data: VehiclePayload): Promise<VehicleApiResponse> {
+  return request<VehicleApiResponse>('/vehicles/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateVehicleApi(id: number, data: VehiclePayload): Promise<VehicleApiResponse> {
+  return request<VehicleApiResponse>(`/vehicles/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteVehicleApi(id: number): Promise<void> {
+  return request<void>(`/vehicles/${id}`, { method: 'DELETE' });
+}
+
+// --- Health ---
 
 export async function healthCheck(): Promise<boolean> {
   try {

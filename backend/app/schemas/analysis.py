@@ -17,8 +17,18 @@ class AffectedPart(BaseModel):
     estimated_cost: Optional[float] = None
 
 
+class AnalysisListResponse(BaseModel):
+    items: list["AnalysisResponse"]
+    total: int
+
+
+class AnalysisPatch(BaseModel):
+    vehicle_id: Optional[int] = None
+
+
 class AnalysisResponse(BaseModel):
     id: int
+    vehicle_id: Optional[int] = None
     image_filename: str
     damage_score: Optional[float]
     damage_zones: list[DamageZone]
