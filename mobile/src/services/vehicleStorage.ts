@@ -1,65 +1,80 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Vehicle } from '../types/analysis';
+import {
+  listVehicles,
+  getVehicleById,
+  createVehicleApi,
+  updateVehicleApi,
+  deleteVehicleApi,
+  type VehicleApiResponse,
+} from './api';
 
-const KEY = 'meva.vehicles';
-
-function makeId(): string {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-}
-
-async function writeAll(vehicles: Vehicle[]): Promise<void> {
-  await AsyncStorage.setItem(KEY, JSON.stringify(vehicles));
+function toVehicle(r: VehicleApiResponse): Vehicle {
+  return {
+    id: String(r.id),
+    brand: r.brand ?? undefined,
+    model: r.model ?? undefined,
+    year: r.year ?? undefined,
+    licensePlate: r.license_plate ?? undefined,
+    notes: r.notes ?? undefined,
+    createdAt: r.created_at,
+  };
 }
 
 export async function getVehicles(): Promise<Vehicle[]> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw) as Vehicle[];
-    return Array.isArray(parsed) ? parsed : [];
+    const items = await listVehicles();
+    return items.map(toVehicle);
   } catch {
     return [];
   }
 }
 
 export async function getVehicle(id: string): Promise<Vehicle | null> {
-  const all = await getVehicles();
-  return all.find((v) => v.id === id) ?? null;
+  try {
+    const r = await getVehicleById(Number(id));
+    return toVehicle(r);
+  } catch {
+    return null;
+  }
 }
 
 export async function createVehicle(
   data: Omit<Vehicle, 'id' | 'createdAt'>,
 ): Promise<Vehicle> {
-  const vehicle: Vehicle = {
-    ...data,
-    id: makeId(),
-    createdAt: new Date().toISOString(),
-  };
-  const all = await getVehicles();
-  await writeAll([vehicle, ...all]);
-  return vehicle;
+  const r = await createVehicleApi({
+    brand: data.brand,
+    model: data.model,
+    year: data.year,
+    license_plate: data.licensePlate,
+    notes: data.notes,
+  });
+  return toVehicle(r);
 }
 
 export async function updateVehicle(
   id: string,
   patch: Partial<Omit<Vehicle, 'id' | 'createdAt'>>,
 ): Promise<Vehicle | null> {
-  const all = await getVehicles();
-  const idx = all.findIndex((v) => v.id === id);
-  if (idx === -1) return null;
-  const updated = { ...all[idx], ...patch };
-  all[idx] = updated;
-  await writeAll(all);
-  return updated;
+  try {
+    const r = await updateVehicleApi(Number(id), {
+      brand: patch.brand,
+      model: patch.model,
+      year: patch.year,
+      license_plate: patch.licensePlate,
+      notes: patch.notes,
+    });
+    return toVehicle(r);
+  } catch {
+    return null;
+  }
 }
 
 export async function deleteVehicle(id: string): Promise<void> {
-  const all = await getVehicles();
-  await writeAll(all.filter((v) => v.id !== id));
+  await deleteVehicleApi(Number(id));
 }
 
 export async function clearVehicles(): Promise<void> {
-  await AsyncStorage.removeItem(KEY);
+  // vehicles are owned by the backend — no-op
 }
 
 export function vehicleDisplayName(vehicle: Vehicle | null | undefined): string {
