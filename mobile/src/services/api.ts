@@ -82,13 +82,16 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
 
 export async function uploadImage(uri: string): Promise<AnalysisResponse> {
   const formData = new FormData();
-  // React Native FormData accepts { uri, name, type } objects;
-  // cast keeps TS happy across web/native typings.
-  formData.append('file', {
-    uri,
-    name: 'upload.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+
+  if (uri.startsWith('blob:') || uri.startsWith('data:')) {
+    // Web: blob/data URIs must be fetched into a real Blob before appending
+    const res = await fetch(uri);
+    const blob = await res.blob();
+    formData.append('file', blob, 'upload.jpg');
+  } else {
+    // React Native: { uri, name, type } is handled by RN's fetch polyfill
+    formData.append('file', { uri, name: 'upload.jpg', type: 'image/jpeg' } as unknown as Blob);
+  }
 
   return request<AnalysisResponse>('/analysis/analyze', {
     method: 'POST',
