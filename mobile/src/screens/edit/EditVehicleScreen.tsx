@@ -1,20 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { getVehicle, updateVehicle } from '../../services/vehicleStorage';
+import { useTheme } from '../../theme';
+import Card from '../../components/Card';
+import { Field, Input } from '../../components/Field';
+import PrimaryButton from '../../components/PrimaryButton';
+import SecondaryButton from '../../components/SecondaryButton';
 
 type EditVehicleRoute = RouteProp<{ EditVehicle: { vehicleId: string } }, 'EditVehicle'>;
 
 export default function EditVehicleScreen() {
+  const { tokens: t } = useTheme();
   const route = useRoute<EditVehicleRoute>();
   const navigation = useNavigation();
   const { vehicleId } = route.params;
@@ -67,110 +64,44 @@ export default function EditVehicleScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <ActivityIndicator color={t.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.helper}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: t.screenPad, paddingBottom: 40 }}>
+      <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg4, marginBottom: 16, lineHeight: 20 }}>
         Edit vehicle details. Updates apply to all sessions for this vehicle.
       </Text>
 
-      <Text style={styles.label}>Brand</Text>
-      <TextInput
-        value={brand}
-        onChangeText={setBrand}
-        placeholder="e.g. Toyota"
-        style={styles.input}
-        autoCapitalize="words"
-      />
+      <Card padding={16}>
+        <Field label="Brand">
+          <Input value={brand} onChangeText={setBrand} placeholder="e.g. Toyota" autoCapitalize="words" />
+        </Field>
+        <Field label="Model">
+          <Input value={model} onChangeText={setModel} placeholder="e.g. Corolla" autoCapitalize="words" />
+        </Field>
+        <Field label="Year">
+          <Input value={year} onChangeText={setYear} placeholder="e.g. 2018" keyboardType="number-pad" maxLength={4} />
+        </Field>
+        <Field label="License plate">
+          <Input value={licensePlate} onChangeText={setLicensePlate} placeholder="e.g. ABC123" autoCapitalize="characters" />
+        </Field>
+        <Field label="Notes">
+          <Input value={notes} onChangeText={setNotes} placeholder="e.g. Bought used in 2022" multiline style={{ minHeight: 70, textAlignVertical: 'top' }} />
+        </Field>
+      </Card>
 
-      <Text style={styles.label}>Model</Text>
-      <TextInput
-        value={model}
-        onChangeText={setModel}
-        placeholder="e.g. Corolla"
-        style={styles.input}
-        autoCapitalize="words"
-      />
-
-      <Text style={styles.label}>Year</Text>
-      <TextInput
-        value={year}
-        onChangeText={setYear}
-        placeholder="e.g. 2018"
-        keyboardType="number-pad"
-        maxLength={4}
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>License plate</Text>
-      <TextInput
-        value={licensePlate}
-        onChangeText={setLicensePlate}
-        placeholder="e.g. ABC123"
-        autoCapitalize="characters"
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Notes</Text>
-      <TextInput
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="e.g. Bought used in 2022"
-        multiline
-        style={[styles.input, styles.inputMulti]}
-      />
-
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonCancel]}
-          onPress={() => navigation.goBack()}
-          disabled={saving}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, saving && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
-        </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+        <View style={{ flex: 1 }}>
+          <SecondaryButton onPress={() => navigation.goBack()} disabled={saving}>Cancel</SecondaryButton>
+        </View>
+        <View style={{ flex: 1 }}>
+          <PrimaryButton onPress={handleSave} loading={saving}>Save</PrimaryButton>
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 20, paddingBottom: 40 },
-  helper: { fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: '#333', marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    backgroundColor: '#fff',
-  },
-  inputMulti: { minHeight: 70, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10, marginTop: 24 },
-  button: {
-    flex: 1,
-    backgroundColor: '#1f6feb',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  buttonCancel: { backgroundColor: '#888' },
-  buttonDisabled: { backgroundColor: '#bbb' },
-  buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-});

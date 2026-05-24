@@ -3,6 +3,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import VehicleListScreen from '../screens/history/VehicleListScreen';
 import VehicleDetailScreen from '../screens/history/VehicleDetailScreen';
 import HistorySessionScreen from '../screens/history/HistorySessionScreen';
+import CameraScreen from '../screens/analyze/CameraScreen';
 import AddPhotosScreen from '../screens/analyze/AddPhotosScreen';
 import ResultDetailScreen from '../screens/analyze/ResultDetailScreen';
 import EditVehicleScreen from '../screens/edit/EditVehicleScreen';
@@ -29,6 +30,7 @@ export default function HistoryStack() {
         component={HistorySessionScreen}
         options={{ title: 'Session' }}
       />
+      <Stack.Screen name="Camera" component={CameraScreen} options={{ headerShown: false }} />
       <Stack.Screen
         name="AddPhotos"
         component={AddPhotosScreen}

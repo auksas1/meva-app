@@ -1,21 +1,21 @@
 import React, { useCallback, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  Image,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Image, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HistoryStackParamList } from '../../navigation/types';
 import type { AnalysisSession, Vehicle } from '../../types/analysis';
 import { getVehicle, deleteVehicle, vehicleDisplayName } from '../../services/vehicleStorage';
-import { getSessionsForVehicle } from '../../services/historyStorage';
+import { getSessionsForVehicle, deleteSession } from '../../services/historyStorage';
+import { confirmAction } from '../../components/confirmAction';
+import { useTheme } from '../../theme';
+import Card from '../../components/Card';
+import SecondaryButton from '../../components/SecondaryButton';
+import DangerButton from '../../components/DangerButton';
+import SectionHeader from '../../components/SectionHeader';
+import LinkButton from '../../components/LinkButton';
+import EmptyState from '../../components/EmptyState';
+import StatusBadge from '../../components/StatusBadge';
 
 type Props = NativeStackScreenProps<HistoryStackParamList, 'VehicleDetail'>;
 
@@ -48,6 +48,7 @@ function totalEstimate(s: AnalysisSession): number | null {
 }
 
 export default function VehicleDetailScreen({ navigation, route }: Props) {
+  const { tokens: t } = useTheme();
   const { vehicleId } = route.params;
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [sessions, setSessions] = useState<AnalysisSession[]>([]);
@@ -67,197 +68,121 @@ export default function VehicleDetailScreen({ navigation, route }: Props) {
   );
 
   const handleDelete = () => {
-    if (sessions.length > 0) {
-      Alert.alert(
-        'Cannot delete',
-        `This vehicle has ${sessions.length} ${sessions.length === 1 ? 'session' : 'sessions'}. Delete the sessions first.`,
-      );
-      return;
-    }
-    Alert.alert('Delete vehicle?', 'This action cannot be undone.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          await deleteVehicle(vehicleId);
-          navigation.goBack();
-        },
-      },
-    ]);
+    const message =
+      sessions.length > 0
+        ? `This vehicle has ${sessions.length} ${sessions.length === 1 ? 'session' : 'sessions'}. The vehicle and all its sessions will be deleted.`
+        : 'This action cannot be undone.';
+    confirmAction('Delete vehicle?', message, async () => {
+      try {
+        for (const s of sessions) {
+          await deleteSession(s.id);
+        }
+        await deleteVehicle(vehicleId);
+        navigation.goBack();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Unknown error';
+        Alert.alert('Could not delete vehicle', msg);
+      }
+    });
   };
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <ActivityIndicator color={t.primary} />
       </View>
     );
   }
 
   if (!vehicle) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.missing}>Vehicle not found.</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <Text style={{ color: t.fg5 }}>Vehicle not found.</Text>
       </View>
     );
   }
 
+  const infoRow = (key: string, value: string) => (
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8 }}>
+      <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg5 }}>{key}</Text>
+      <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, fontWeight: t.fw.medium, flexShrink: 1, textAlign: 'right' }}>{value}</Text>
+    </View>
+  );
+
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <View style={styles.headerRow}>
-        <Ionicons name="car" size={28} color="#1f6feb" />
-        <Text style={styles.title}>{vehicleDisplayName(vehicle)}</Text>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: t.screenPad, paddingBottom: 40 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4, marginBottom: 16 }}>
+        <View style={{
+          width: 40, height: 40, borderRadius: 12, backgroundColor: t.primarySubtle,
+          alignItems: 'center', justifyContent: 'center', marginRight: 12,
+        }}>
+          <Ionicons name="car" size={22} color={t.primary} />
+        </View>
+        <Text style={{ fontFamily: t.font, fontSize: t.fs.h1, fontWeight: t.fw.bold, color: t.fg1, letterSpacing: -0.4, flex: 1 }}>
+          {vehicleDisplayName(vehicle)}
+        </Text>
       </View>
 
-      <View style={styles.infoBox}>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Brand</Text>
-          <Text style={styles.infoValue}>{vehicle.brand ?? '—'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Model</Text>
-          <Text style={styles.infoValue}>{vehicle.model ?? '—'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>Year</Text>
-          <Text style={styles.infoValue}>{vehicle.year ?? '—'}</Text>
-        </View>
-        <View style={styles.infoRow}>
-          <Text style={styles.infoKey}>License plate</Text>
-          <Text style={styles.infoValue}>{vehicle.licensePlate ?? '—'}</Text>
-        </View>
+      <Card padding={{ paddingHorizontal: 16, paddingVertical: 6 }}>
+        {infoRow('Brand', vehicle.brand ?? '—')}
+        {infoRow('Model', vehicle.model ?? '—')}
+        {infoRow('Year', vehicle.year !== undefined ? String(vehicle.year) : '—')}
+        {infoRow('License plate', vehicle.licensePlate ?? '—')}
         {vehicle.notes ? (
-          <View style={[styles.infoRow, styles.notesRow]}>
-            <Text style={styles.infoKey}>Notes</Text>
-            <Text style={styles.notesValue}>{vehicle.notes}</Text>
+          <View style={{ paddingVertical: 8 }}>
+            <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg5, marginBottom: 4 }}>Notes</Text>
+            <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg2, lineHeight: 20 }}>{vehicle.notes}</Text>
           </View>
         ) : null}
-      </View>
+      </Card>
 
-      <View style={styles.actionsRow}>
-        <TouchableOpacity
-          style={styles.actionButton}
-          onPress={() => navigation.navigate('EditVehicle', { vehicleId })}
-        >
-          <Ionicons name="create-outline" size={16} color="#fff" />
-          <Text style={styles.actionButtonText}>Edit vehicle</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.actionButtonDanger]}
-          onPress={handleDelete}
-        >
-          <Ionicons name="trash-outline" size={16} color="#fff" />
-          <Text style={styles.actionButtonText}>Delete</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Text style={[styles.sectionLabel, styles.sectionSpacing]}>Sessions</Text>
-      {sessions.length === 0 ? (
-        <View style={styles.emptyBox}>
-          <Text style={styles.emptyText}>
-            No analyses yet for this vehicle. Take photos in the Analyze tab.
-          </Text>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+        <View style={{ flex: 1 }}>
+          <SecondaryButton leftIcon="create-outline" onPress={() => navigation.navigate('EditVehicle', { vehicleId })}>
+            Edit vehicle
+          </SecondaryButton>
         </View>
+        <View style={{ flex: 1 }}>
+          <DangerButton leftIcon="trash-outline" onPress={handleDelete}>Delete</DangerButton>
+        </View>
+      </View>
+
+      <SectionHeader
+        title="Sessions"
+        action={<LinkButton leftIcon="add" onPress={() => navigation.navigate('AddPhotos', { vehicleId })}>New session</LinkButton>}
+      />
+
+      {sessions.length === 0 ? (
+        <EmptyState icon="images-outline" title="No analyses yet" body="No analyses yet for this vehicle. Take photos in the Analyze tab." />
       ) : (
-        sessions.map((s) => {
-          const damages = totalDamages(s);
-          const estimate = totalEstimate(s);
-          const repaired = (s.repairs?.length ?? 0) > 0;
-          const firstUri = s.photos[0]?.localUri;
-          return (
-            <TouchableOpacity
-              key={s.id}
-              style={styles.card}
-              onPress={() => navigation.navigate('HistorySession', { sessionId: s.id })}
-            >
-              {firstUri ? (
-                <Image source={{ uri: firstUri }} style={styles.thumb} />
-              ) : (
-                <View style={[styles.thumb, styles.thumbPlaceholder]} />
-              )}
-              <View style={styles.cardBody}>
-                <View style={styles.cardHeader}>
-                  <Text style={styles.cardDate}>{formatDate(s.createdAt)}</Text>
-                  {repaired ? <Text style={styles.repairedBadge}>✓ Repaired</Text> : null}
+        <View style={{ gap: 10 }}>
+          {sessions.map((s) => {
+            const damages = totalDamages(s);
+            const estimate = totalEstimate(s);
+            const repaired = (s.repairs?.length ?? 0) > 0;
+            const firstUri = s.photos[0]?.localUri;
+            return (
+              <Card key={s.id} onPress={() => navigation.navigate('HistorySession', { sessionId: s.id })} padding={12} style={{ flexDirection: 'row', alignItems: 'center' }}>
+                {firstUri ? (
+                  <Image source={{ uri: firstUri }} style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: t.surface3 }} />
+                ) : (
+                  <View style={{ width: 56, height: 56, borderRadius: 12, backgroundColor: t.surface3 }} />
+                )}
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <Text style={{ fontFamily: t.font, fontSize: t.fs.body, fontWeight: t.fw.semibold, color: t.fg1 }}>{formatDate(s.createdAt)}</Text>
+                    {repaired ? <StatusBadge color="success" label="Repaired" /> : null}
+                  </View>
+                  <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg4, marginTop: 4 }}>
+                    {s.photos.length} {s.photos.length === 1 ? 'photo' : 'photos'} · {damages} {damages === 1 ? 'damage' : 'damages'}
+                    {estimate !== null ? `  ·  €${estimate.toFixed(0)}` : ''}
+                  </Text>
                 </View>
-                <Text style={styles.cardLine}>
-                  {s.photos.length} {s.photos.length === 1 ? 'photo' : 'photos'} · {damages}{' '}
-                  {damages === 1 ? 'damage' : 'damages'}
-                  {estimate !== null ? `  ·  ~€${estimate.toFixed(0)}` : ''}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })
+              </Card>
+            );
+          })}
+        </View>
       )}
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  missing: { color: '#666' },
-  container: { padding: 20, paddingBottom: 40 },
-
-  headerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16 },
-  title: { fontSize: 22, fontWeight: '700' },
-
-  infoBox: { backgroundColor: '#f7f7f7', borderRadius: 8, padding: 12 },
-  infoRow: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 4 },
-  notesRow: { flexDirection: 'column', alignItems: 'flex-start', gap: 4 },
-  infoKey: { fontSize: 13, color: '#666' },
-  infoValue: { fontSize: 14, color: '#222', fontWeight: '500' },
-  notesValue: { fontSize: 13, color: '#333' },
-
-  actionsRow: { flexDirection: 'row', gap: 10, marginTop: 12 },
-  actionButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#1f6feb',
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 6,
-  },
-  actionButtonDanger: { backgroundColor: '#d12f2f' },
-  actionButtonText: { color: '#fff', fontSize: 14, fontWeight: '600' },
-
-  sectionLabel: { fontSize: 14, fontWeight: '700', color: '#333', marginBottom: 8 },
-  sectionSpacing: { marginTop: 24 },
-
-  emptyBox: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 8,
-    paddingVertical: 24,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  emptyText: { color: '#888', fontSize: 13, textAlign: 'center' },
-
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f7f7f7',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 10,
-  },
-  thumb: { width: 56, height: 56, borderRadius: 6, backgroundColor: '#eee', marginRight: 12 },
-  thumbPlaceholder: { backgroundColor: '#ddd' },
-  cardBody: { flex: 1 },
-  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardDate: { fontSize: 14, fontWeight: '600' },
-  cardLine: { fontSize: 13, color: '#555', marginTop: 2 },
-  repairedBadge: {
-    fontSize: 11,
-    color: '#1f8a3e',
-    fontWeight: '700',
-    backgroundColor: '#e3f4ea',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    overflow: 'hidden',
-  },
-});

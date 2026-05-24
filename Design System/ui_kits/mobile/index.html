@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AutoDamage — Mobile UI Kit</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../../colors_and_type.css">
+<style>
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--ad-font);
+    background:
+      radial-gradient(1200px 600px at 80% -10%, rgba(37,98,238,0.10), transparent 60%),
+      radial-gradient(900px 500px at -10% 110%, rgba(37,98,238,0.05), transparent 60%),
+      #f4f6fb;
+    color: var(--ad-fg-1);
+    -webkit-font-smoothing: antialiased;
+    transition: background 250ms ease, color 250ms ease;
+  }
+  body[data-stage-theme="dark"] {
+    background:
+      radial-gradient(1400px 800px at 80% -10%, rgba(59,123,255,0.15), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(29,78,216,0.10), transparent 60%),
+      #060912;
+    color: #dbe0eb;
+  }
+
+  .stage {
+    min-height: 100vh;
+    padding: 56px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--ad-hairline);
+    border-radius: 18px;
+    padding: 14px 20px 14px 16px;
+    box-shadow: 0 6px 20px rgba(15,22,40,0.06);
+  }
+  body[data-stage-theme="dark"] .stage-header {
+    background: rgba(18,24,35,0.7);
+    border-color: #232b3a;
+    box-shadow: 0 10px 28px rgba(0,0,0,0.5);
+  }
+  .stage-header .brand-tile {
+    width: 44px; height: 44px; border-radius: 12px;
+    background: linear-gradient(135deg, #2562ee 0%, #1d4ed8 100%);
+    color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; font-size: 18px; letter-spacing: -0.5px;
+    box-shadow: 0 8px 16px rgba(37,98,238,0.35);
+  }
+  .stage-header h1 {
+    margin: 0;
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .stage-header p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: var(--ad-fg-5);
+  }
+  body[data-stage-theme="dark"] .stage-header p { color: #8a91a4; }
+  .stage-header .theme-toggle {
+    margin-left: auto;
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 999px;
+    background: rgba(15,22,40,0.04);
+    gap: 2px;
+  }
+  body[data-stage-theme="dark"] .stage-header .theme-toggle {
+    background: rgba(255,255,255,0.08);
+  }
+  .stage-header .theme-toggle button {
+    background: transparent; border: 0; cursor: pointer;
+    padding: 6px 14px; border-radius: 999px;
+    font: 600 12px var(--ad-font);
+    color: var(--ad-fg-4);
+  }
+  .stage-header .theme-toggle button.active {
+    background: var(--ad-primary);
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(37,98,238,0.35);
+  }
+  body[data-stage-theme="dark"] .stage-header .theme-toggle button {
+    color: #b8becc;
+  }
+
+  .ios-shell { position: relative; }
+  .ios-shell .meva-content-pad {
+    padding-top: 60px;
+    height: 100%;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+  }
+  @keyframes ad-spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body data-stage-theme="dark">
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="ios-frame.jsx"></script>
+<script type="text/babel" src="Primitives.jsx"></script>
+<script type="text/babel" src="Screens.jsx"></script>
+<script type="text/babel" src="App.jsx"></script>
+
+<script type="text/babel">
+function Root() {
+  const [dark, setDark] = React.useState(true);
+  // Apply theme synchronously before App reads it
+  window.AD_DARK = dark;
+  React.useEffect(() => {
+    window.AD_DARK = dark;
+    document.body.dataset.stageTheme = dark ? 'dark' : 'light';
+  }, [dark]);
+
+  return (
+    <div className="stage">
+      <div className="stage-header">
+        <div className="brand-tile">AD</div>
+        <div>
+          <h1>AutoDamage Mobile UI Kit</h1>
+          <p>by MEVA AI · React Native / Expo recreation</p>
+        </div>
+        <div className="theme-toggle" role="tablist">
+          <button className={dark ? '' : 'active'} onClick={() => setDark(false)}>Light</button>
+          <button className={dark ? 'active' : ''} onClick={() => setDark(true)}>Dark</button>
+        </div>
+      </div>
+      <div className="ios-shell">
+        <IOSDevice key={dark ? 'dark' : 'light'} width={390} height={800} dark={dark}>
+          <div className="meva-content-pad" style={{ background: dark ? '#0a0e16' : '#f7f8fb' }}>
+            <AD_App dark={dark} onToggleDark={(v) => setDark(typeof v === 'boolean' ? v : !dark)} />
+          </div>
+        </IOSDevice>
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<Root />);
+</script>
+</body>
+</html>

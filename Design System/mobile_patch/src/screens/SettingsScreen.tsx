@@ -1,0 +1,240 @@
+import React, { useEffect, useState } from 'react';
+import { View, Text, ScrollView, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { SettingsStackParamList } from '../navigation/types';
+import { DEFAULT_BACKEND_URL, IMAGE_QUALITY_PRESETS, type ImageQuality } from '../constants/config';
+import { healthCheck } from '../services/api';
+import {
+  getStoredBackendUrl, setStoredBackendUrl,
+  getStoredImageQuality, setStoredImageQuality,
+} from '../services/storage';
+import { saveSession, clearHistory } from '../services/historyStorage';
+import { createVehicle, getVehicles, clearVehicles } from '../services/vehicleStorage';
+import { getCurrentUser, logout, type AuthUser } from '../services/auth';
+import { confirmAction } from '../components/confirmAction';
+
+import { useTheme } from '../theme';
+import BrandStamp from '../components/BrandStamp';
+import Card from '../components/Card';
+import SectionHeader from '../components/SectionHeader';
+import { Field, Input } from '../components/Field';
+import Segmented from '../components/Segmented';
+import PrimaryButton from '../components/PrimaryButton';
+import SecondaryButton from '../components/SecondaryButton';
+import DangerButton from '../components/DangerButton';
+
+export default function SettingsScreen() {
+  const { tokens: t, pref, setPref } = useTheme();
+  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList, 'SettingsHome'>>();
+
+  const [urlInput, setUrlInput] = useState(DEFAULT_BACKEND_URL);
+  const [savedUrl, setSavedUrl] = useState(DEFAULT_BACKEND_URL);
+  const [quality, setQuality] = useState<ImageQuality>('medium');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'ok' | 'failed' | null>(null);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+
+  useFocusEffect(
+    React.useCallback(() => {
+      getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
+    }, []),
+  );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const [storedUrl, storedQuality] = await Promise.all([getStoredBackendUrl(), getStoredImageQuality()]);
+        setUrlInput(storedUrl);
+        setSavedUrl(storedUrl);
+        setQuality(storedQuality);
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const urlDirty = urlInput.trim().replace(/\/+$/, '') !== savedUrl;
+
+  const handleSaveUrl = async () => {
+    const trimmed = urlInput.trim();
+    if (!trimmed) { Alert.alert('Invalid URL', 'Backend URL cannot be empty.'); return; }
+    if (!/^https?:\/\//i.test(trimmed)) { Alert.alert('Invalid URL', 'URL must start with http:// or https://'); return; }
+    try {
+      setSaving(true);
+      await setStoredBackendUrl(trimmed);
+      const cleaned = trimmed.replace(/\/+$/, '');
+      setSavedUrl(cleaned);
+      setUrlInput(cleaned);
+    } catch {
+      Alert.alert('Error', 'Could not save backend URL.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCheckConnection = async () => {
+    setChecking(true);
+    setConnectionStatus(null);
+    try { setConnectionStatus((await healthCheck()) ? 'ok' : 'failed'); }
+    finally { setChecking(false); }
+  };
+
+  const handleSelectQuality = async (next: ImageQuality) => {
+    setQuality(next);
+    try { await setStoredImageQuality(next); } catch { Alert.alert('Error', 'Could not save image quality.'); }
+  };
+
+  const handleSignOut = () => {
+    confirmAction('Sign out?', 'You can sign back in at any time.', async () => {
+      await logout();
+      setCurrentUser(null);
+    }, 'Sign out');
+  };
+
+  const handleClearHistory = () => {
+    Alert.alert(
+      'Clear all data?',
+      'All saved vehicles and analysis sessions will be removed.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear', style: 'destructive', onPress: async () => {
+          try { await clearHistory(); await clearVehicles(); Alert.alert('Cleared'); }
+          catch { Alert.alert('Error', 'Could not clear data.'); }
+        }},
+      ],
+    );
+  };
+
+  if (loading) return <View style={{ flex: 1, backgroundColor: t.bg }} />;
+
+  return (
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: t.screenPad, paddingBottom: 28 }}>
+      <View style={{ marginTop: 4, marginBottom: 18 }}>
+        <BrandStamp />
+      </View>
+
+      {/* Account */}
+      <SectionHeader title="Account" />
+      <Card padding={16}>
+        {currentUser ? (
+          <>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={{
+                width: 44, height: 44, borderRadius: 22,
+                backgroundColor: t.scanGradStart,
+                alignItems: 'center', justifyContent: 'center',
+              }}>
+                <Text style={{ color: '#fff', fontFamily: t.font, fontWeight: t.fw.bold, fontSize: t.fs.h3 }}>
+                  {(currentUser.name || currentUser.email || 'U').charAt(0).toUpperCase()}
+                </Text>
+              </View>
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={{ fontFamily: t.font, fontWeight: t.fw.semibold, fontSize: t.fs.body, color: t.fg1 }}>{currentUser.name ?? 'Signed in'}</Text>
+                <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 2 }}>{currentUser.email}</Text>
+              </View>
+            </View>
+            <View style={{ marginTop: 14 }}>
+              <DangerButton onPress={handleSignOut}>Sign out</DangerButton>
+            </View>
+          </>
+        ) : (
+          <>
+            <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg3 }}>You are not signed in.</Text>
+            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
+              <View style={{ flex: 1 }}><PrimaryButton onPress={() => navigation.navigate('Login')}>Sign in</PrimaryButton></View>
+              <View style={{ flex: 1 }}><SecondaryButton onPress={() => navigation.navigate('Register')}>Register</SecondaryButton></View>
+            </View>
+          </>
+        )}
+      </Card>
+
+      {/* Appearance */}
+      <SectionHeader title="Appearance" />
+      <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 14 }}>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={{ fontFamily: t.font, fontWeight: t.fw.semibold, fontSize: t.fs.bodySm, color: t.fg1 }}>Theme</Text>
+            <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 2 }}>Light, dark, or follow system</Text>
+          </View>
+          <View style={{ width: 220 }}>
+            <Segmented<'light' | 'dark' | 'system'>
+              options={[{value:'light',label:'Light'},{value:'dark',label:'Dark'},{value:'system',label:'Auto'}]}
+              value={pref}
+              onChange={setPref}
+            />
+          </View>
+        </View>
+      </Card>
+
+      {/* Backend */}
+      <SectionHeader title="Backend" />
+      <Card padding={16}>
+        <Field label="Backend URL">
+          <Input value={urlInput} onChangeText={setUrlInput} autoCapitalize="none" autoCorrect={false} keyboardType="url" placeholder="http://10.0.2.2:8000" />
+        </Field>
+        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14, marginTop: -4 }}>
+          <View style={{ width: 8, height: 8, borderRadius: 4, marginRight: 8, backgroundColor:
+            connectionStatus === 'ok' ? t.success
+            : connectionStatus === 'failed' ? t.severe
+            : t.fg5,
+          }} />
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, fontWeight: t.fw.semibold, color:
+            connectionStatus === 'ok' ? t.success
+            : connectionStatus === 'failed' ? t.severe
+            : t.fg5,
+          }}>
+            {connectionStatus === 'ok' ? 'Connected'
+              : connectionStatus === 'failed' ? 'Connection failed'
+              : `Not tested · ${savedUrl}`}
+          </Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
+          <View style={{ flex: 1 }}>
+            <PrimaryButton onPress={handleSaveUrl} disabled={!urlDirty} loading={saving}>Save</PrimaryButton>
+          </View>
+          <View style={{ flex: 1 }}>
+            <SecondaryButton onPress={handleCheckConnection} disabled={checking}>{checking ? 'Checking…' : 'Check'}</SecondaryButton>
+          </View>
+        </View>
+      </Card>
+
+      {/* Capture quality */}
+      <SectionHeader title="Capture quality" hint="Lower quality uploads faster on poor networks" />
+      <Card padding={{ paddingHorizontal: 16, paddingVertical: 14 }}>
+        <Segmented<ImageQuality>
+          options={[{value:'low',label:'Low'},{value:'medium',label:'Medium'},{value:'high',label:'High'}]}
+          value={quality}
+          onChange={handleSelectQuality}
+        />
+        <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 8 }}>
+          Capture quality: {IMAGE_QUALITY_PRESETS[quality].toFixed(1)}
+        </Text>
+      </Card>
+
+      {/* Dev tools */}
+      <SectionHeader title="Developer" hint="For development testing only" />
+      <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 16 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12 }}>
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg5 }}>App version</Text>
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, fontWeight: t.fw.semibold }}>Sprint 3 demo</Text>
+        </View>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderTopWidth: 1, borderTopColor: t.hairline }}>
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg5 }}>Runtime</Text>
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, fontWeight: t.fw.semibold }}>React Native + Expo</Text>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+          <View style={{ flex: 1 }}>
+            <SecondaryButton onPress={async () => Alert.alert('Test session added (stub)') /* keep your original handleAddTestSession here */}>Add test</SecondaryButton>
+          </View>
+          <View style={{ flex: 1 }}>
+            <DangerButton onPress={handleClearHistory}>Clear data</DangerButton>
+          </View>
+        </View>
+      </Card>
+    </ScrollView>
+  );
+}

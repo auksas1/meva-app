@@ -1,12 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ActivityIndicator } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { HistoryStackParamList } from '../../navigation/types';
 import type { AnalysisSession, Vehicle } from '../../types/analysis';
-import { getSession } from '../../services/historyStorage';
+import { getSession, deleteSession } from '../../services/historyStorage';
 import { getVehicle } from '../../services/vehicleStorage';
 import SessionDetailView from '../../components/SessionDetailView';
+import { confirmAction } from '../../components/confirmAction';
+import { useTheme } from '../../theme';
 
 type Props = NativeStackScreenProps<HistoryStackParamList, 'HistorySession'>;
 
@@ -23,6 +25,7 @@ function formatDate(iso: string): string {
 }
 
 export default function HistorySessionScreen({ navigation, route }: Props) {
+  const { tokens: t } = useTheme();
   const { sessionId } = route.params;
   const [session, setSession] = useState<AnalysisSession | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
@@ -44,18 +47,29 @@ export default function HistorySessionScreen({ navigation, route }: Props) {
     }, [reload]),
   );
 
+  const handleDeleteSession = () => {
+    confirmAction(
+      'Delete session?',
+      'This session and all its photos will be removed.',
+      async () => {
+        await deleteSession(sessionId);
+        navigation.goBack();
+      },
+    );
+  };
+
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <ActivityIndicator color={t.primary} />
       </View>
     );
   }
 
   if (!session) {
     return (
-      <View style={styles.centered}>
-        <Text style={styles.missing}>Session not found.</Text>
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <Text style={{ color: t.fg5 }}>Session not found.</Text>
       </View>
     );
   }
@@ -68,16 +82,11 @@ export default function HistorySessionScreen({ navigation, route }: Props) {
       onPhotoPress={(idx) =>
         navigation.navigate('ResultDetail', { sessionId, photoIndex: idx })
       }
-      onEditVehicle={() => navigation.navigate('EditVehicle', { vehicleId: session.vehicleId })}
       onAddPhotos={() => navigation.navigate('AddPhotos', { sessionId })}
       onAddRepair={() => navigation.navigate('EditRepair', { sessionId })}
       onEditRepair={(repairId) => navigation.navigate('EditRepair', { sessionId, repairId })}
       onChanged={reload}
+      onDeleteSession={handleDeleteSession}
     />
   );
 }
-
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  missing: { color: '#666' },
-});
