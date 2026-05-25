@@ -1,7 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AnalysisSession, AnalyzedPhoto, RepairRecord } from '../types/analysis';
-import type { AnalysisResponse } from './api';
-import { listAnalysesForVehicle, patchAnalysis } from './api';
+import { patchAnalysis } from './api';
 import { createVehicle, getVehicles } from './vehicleStorage';
 
 const KEY = 'meva.history';
@@ -41,28 +40,12 @@ export async function getSession(id: string): Promise<AnalysisSession | null> {
 }
 
 export async function getSessionsForVehicle(vehicleId: string): Promise<AnalysisSession[]> {
-  const localSessions = (await getSessions()).filter((s) => s.vehicleId === vehicleId);
-
-  // Also fetch backend analyses for this vehicle and surface any not already in a local session.
-  try {
-    const backendAnalyses = await listAnalysesForVehicle(Number(vehicleId));
-    const localAnalysisIds = new Set(
-      localSessions.flatMap((s) => s.photos.map((p) => p.result.id)),
-    );
-    const orphans = backendAnalyses
-      .filter((a) => !localAnalysisIds.has(a.id))
-      .map((a): AnalysisSession => ({
-        id: String(a.id),
-        vehicleId,
-        createdAt: a.created_at,
-        photos: [{ localUri: '', result: a }],
-      }));
-    return [...localSessions, ...orphans].sort(
-      (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
-    );
-  } catch {
-    return localSessions;
-  }
+  // Sessions are owned locally. We intentionally do NOT synthesize extra sessions
+  // from backend analyses: that produced phantom "empty" sessions (blank thumbnail,
+  // un-openable) alongside the real one. The real session already carries the photos.
+  return (await getSessions())
+    .filter((s) => s.vehicleId === vehicleId)
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
 export async function saveSession(
@@ -115,6 +98,29 @@ export async function appendPhotosToSession(
 export async function deleteSession(id: string): Promise<void> {
   const sessions = await getSessions();
   await writeAll(sessions.filter((s) => s.id !== id));
+}
+
+/**
+ * Removes one photo (by index) from a session. If it was the last photo, the
+ * whole session is deleted. The removed photo's backend analysis is unlinked
+ * from its vehicle (best-effort) so it doesn't resurface as an orphan session.
+ */
+export async function deletePhotoFromSession(
+  sessionId: string,
+  photoIndex: number,
+): Promise<void> {
+  const session = await getSession(sessionId);
+  if (!session) return;
+  const removed = session.photos[photoIndex];
+  const photos = session.photos.filter((_, i) => i !== photoIndex);
+  if (photos.length === 0) {
+    await deleteSession(sessionId);
+  } else {
+    await updateSession(sessionId, { photos });
+  }
+  if (removed) {
+    patchAnalysis(removed.result.id, { vehicle_id: null }).catch(() => {});
+  }
 }
 
 export async function addRepair(

@@ -74,7 +74,14 @@ export async function deleteVehicle(id: string): Promise<void> {
 }
 
 export async function clearVehicles(): Promise<void> {
-  // vehicles are owned by the backend — no-op
+  const all = await getVehicles();
+  for (const v of all) {
+    try {
+      await deleteVehicleApi(Number(v.id));
+    } catch {
+      // best-effort — keep deleting the rest even if one fails
+    }
+  }
 }
 
 export function vehicleDisplayName(vehicle: Vehicle | null | undefined): string {

@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="_card.css">
+<style>
+  body { font-family: "Inter", -apple-system, sans-serif; }
+  .sw { display:flex;flex-direction:column;background:#fff;border:1px solid #e6e9f0;border-radius:14px;overflow:hidden; }
+  .sw .fill { height:64px; }
+  .sw .body { padding:10px 12px;display:flex;justify-content:space-between;align-items:baseline; }
+  .sw .name { font-weight:600;font-size:12px;color:#0b1220; }
+  .sw .role { font-size:10px;color:#8c93a5;text-transform:uppercase;letter-spacing:.06em; }
+  .sw .hex { font-family:ui-monospace,Menlo,monospace;font-size:10px;color:#5d6577; }
+</style></head>
+<body>
+<div class="card" style="padding:18px 20px;">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+    <div class="sw">
+      <div class="fill" style="background:#1d4ed8;"></div>
+      <div class="body"><div><div class="name">cobalt-700</div><div class="role">Hover · pressed</div></div><span class="hex">#1D4ED8</span></div>
+    </div>
+    <div class="sw" style="outline:2px solid #2562ee;outline-offset:-2px;">
+      <div class="fill" style="background:#2562ee;"></div>
+      <div class="body"><div><div class="name">cobalt-600</div><div class="role">Primary (light)</div></div><span class="hex">#2562EE</span></div>
+    </div>
+    <div class="sw">
+      <div class="fill" style="background:#3b7bff;"></div>
+      <div class="body"><div><div class="name">cobalt-500</div><div class="role">Primary (dark)</div></div><span class="hex">#3B7BFF</span></div>
+    </div>
+    <div class="sw">
+      <div class="fill" style="background:#5b94ff;"></div>
+      <div class="body"><div><div class="name">cobalt-400</div><div class="role">Hover (dark)</div></div><span class="hex">#5B94FF</span></div>
+    </div>
+    <div class="sw">
+      <div class="fill" style="background:#eef3ff;"></div>
+      <div class="body"><div><div class="name">cobalt-50</div><div class="role">Subtle (light)</div></div><span class="hex">#EEF3FF</span></div>
+    </div>
+    <div class="sw">
+      <div class="fill" style="background:#0f1a35;"></div>
+      <div class="body"><div><div class="name">cobalt-950</div><div class="role">Subtle (dark)</div></div><span class="hex">#0F1A35</span></div>
+    </div>
+    <div class="sw" style="grid-column:span 2;">
+      <div class="fill" style="background:linear-gradient(135deg,#2562ee 0%,#1d4ed8 100%);"></div>
+      <div class="body"><div><div class="name">scan gradient</div><div class="role">Hero CTA · brand stamp</div></div><span class="hex">135° 600→700</span></div>
+    </div>
+  </div>
+</div>
+</body></html>

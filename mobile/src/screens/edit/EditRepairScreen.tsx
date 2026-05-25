@@ -1,16 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, ActivityIndicator, Alert } from 'react-native';
 import { useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
 import { addRepair, getSession, updateRepair } from '../../services/historyStorage';
+import { useTheme } from '../../theme';
+import Card from '../../components/Card';
+import { Field, Input } from '../../components/Field';
+import PrimaryButton from '../../components/PrimaryButton';
+import SecondaryButton from '../../components/SecondaryButton';
 
 type EditRepairRoute = RouteProp<
   { EditRepair: { sessionId: string; repairId?: string } },
@@ -26,6 +22,7 @@ function formatDateInput(iso: string): string {
 }
 
 export default function EditRepairScreen() {
+  const { tokens: t } = useTheme();
   const route = useRoute<EditRepairRoute>();
   const navigation = useNavigation();
   const { sessionId, repairId } = route.params;
@@ -95,107 +92,44 @@ export default function EditRepairScreen() {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: t.bg }}>
+        <ActivityIndicator color={t.primary} />
       </View>
     );
   }
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.helper}>
+    <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: t.screenPad, paddingBottom: 40 }}>
+      <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg4, marginBottom: 16, lineHeight: 20 }}>
         {isEdit ? 'Edit repair record details.' : 'Log work performed on this vehicle.'}
       </Text>
 
-      <Text style={styles.label}>Date performed</Text>
-      <TextInput
-        value={performedAt}
-        onChangeText={setPerformedAt}
-        placeholder="YYYY-MM-DD"
-        style={styles.input}
-      />
+      <Card padding={16}>
+        <Field label="Date performed">
+          <Input value={performedAt} onChangeText={setPerformedAt} placeholder="YYYY-MM-DD" autoCapitalize="none" />
+        </Field>
+        <Field label="Performed by">
+          <Input value={performedBy} onChangeText={setPerformedBy} placeholder="e.g. AutoFix Vilnius" />
+        </Field>
+        <Field label="Work description">
+          <Input value={workDescription} onChangeText={setWorkDescription} placeholder="e.g. Replaced front bumper, repainted" multiline style={{ minHeight: 80, textAlignVertical: 'top' }} />
+        </Field>
+        <Field label="Actual cost (€)">
+          <Input value={actualCost} onChangeText={setActualCost} placeholder="e.g. 580" keyboardType="decimal-pad" />
+        </Field>
+        <Field label="Notes">
+          <Input value={notes} onChangeText={setNotes} placeholder="Optional" multiline style={{ minHeight: 80, textAlignVertical: 'top' }} />
+        </Field>
+      </Card>
 
-      <Text style={styles.label}>Performed by</Text>
-      <TextInput
-        value={performedBy}
-        onChangeText={setPerformedBy}
-        placeholder="e.g. AutoFix Vilnius"
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Work description</Text>
-      <TextInput
-        value={workDescription}
-        onChangeText={setWorkDescription}
-        placeholder="e.g. Replaced front bumper, repainted"
-        multiline
-        style={[styles.input, styles.inputMulti]}
-      />
-
-      <Text style={styles.label}>Actual cost (€)</Text>
-      <TextInput
-        value={actualCost}
-        onChangeText={setActualCost}
-        placeholder="e.g. 580"
-        keyboardType="decimal-pad"
-        style={styles.input}
-      />
-
-      <Text style={styles.label}>Notes</Text>
-      <TextInput
-        value={notes}
-        onChangeText={setNotes}
-        placeholder="Optional"
-        multiline
-        style={[styles.input, styles.inputMulti]}
-      />
-
-      <View style={styles.row}>
-        <TouchableOpacity
-          style={[styles.button, styles.buttonCancel]}
-          onPress={() => navigation.goBack()}
-          disabled={saving}
-        >
-          <Text style={styles.buttonText}>Cancel</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.button, saving && styles.buttonDisabled]}
-          onPress={handleSave}
-          disabled={saving}
-        >
-          {saving ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Save</Text>}
-        </TouchableOpacity>
+      <View style={{ flexDirection: 'row', gap: 10, marginTop: 24 }}>
+        <View style={{ flex: 1 }}>
+          <SecondaryButton onPress={() => navigation.goBack()} disabled={saving}>Cancel</SecondaryButton>
+        </View>
+        <View style={{ flex: 1 }}>
+          <PrimaryButton onPress={handleSave} loading={saving}>Save</PrimaryButton>
+        </View>
       </View>
     </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  centered: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  container: { padding: 20, paddingBottom: 40 },
-  helper: { fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 18 },
-  label: { fontSize: 13, fontWeight: '600', color: '#333', marginTop: 12, marginBottom: 6 },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
-    backgroundColor: '#fff',
-  },
-  inputMulti: { minHeight: 80, textAlignVertical: 'top' },
-  row: { flexDirection: 'row', gap: 10, marginTop: 24 },
-  button: {
-    flex: 1,
-    backgroundColor: '#1f6feb',
-    paddingVertical: 14,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: 48,
-  },
-  buttonCancel: { backgroundColor: '#888' },
-  buttonDisabled: { backgroundColor: '#bbb' },
-  buttonText: { color: '#fff', fontSize: 15, fontWeight: '600' },
-});

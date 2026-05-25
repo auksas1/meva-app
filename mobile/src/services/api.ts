@@ -1,9 +1,25 @@
 import { DEFAULT_BACKEND_URL, REQUEST_TIMEOUT_MS } from '../constants/config';
 
-export type DamageZone = {
-  label: string;
-  confidence: number;
+// A single damage detection from the model.
+// `bbox` is assumed normalized [x1, y1, x2, y2] in 0..1 — confirm against the
+// real YOLO endpoint when it lands. Reserved for a possible future client-side
+// overlay; NOT drawn now, since the backend is expected to return an image that
+// already has the boxes/frame baked in (see `annotated_image_*` below).
+export type Detection = {
+  label: string; // raw model class, e.g. "Dent", "Rust_Corrision"
+  confidence: number; // 0..1
+  confidence_text?: string; // "high confidence" | "medium confidence" | ...
   bbox: [number, number, number, number];
+};
+
+// Legacy alias — older backend responses used `damage_zones`. Kept for back-compat.
+export type DamageZone = Detection;
+
+export type AnalysisSummary = {
+  detections_count?: number;
+  primary_damage?: string;
+  analysis_quality?: string; // e.g. "good" | "poor"
+  requires_manual_review?: boolean;
 };
 
 export type AffectedPart = {
@@ -15,16 +31,30 @@ export type AnalysisResponse = {
   id: number;
   vehicle_id?: number | null;
   image_filename: string;
-  damage_score: number;
-  damage_zones: DamageZone[];
-  status: string;
+  status?: string;
   created_at: string;
+
+  // New AI contract
+  summary?: AnalysisSummary;
+  detections?: Detection[];
+  recommendation?: { message?: string };
+
+  // Optional: an image the backend has already annotated with boxes/frame.
+  // If present, the UI shows this instead of the user's local photo. (Exact
+  // field name TBD — we accept any of the three the team might use.)
+  annotated_image_url?: string;
+  annotated_image_uri?: string;
+  annotated_image?: string;
+
+  // Cost ledger (kept)
+  affected_parts?: AffectedPart[];
+  total_estimated_cost?: number;
+
+  // Legacy / back-compat (tolerated, read only via helpers; never shown as severity)
+  damage_zones?: DamageZone[];
   vehicle_brand?: string;
   vehicle_model?: string;
   vehicle_year?: number;
-  affected_parts?: AffectedPart[];
-  total_estimated_cost?: number;
-  repair_recommendation?: string;
 };
 
 export class ApiError extends Error {
