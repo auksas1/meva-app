@@ -14,6 +14,7 @@ import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
 import SectionHeader from '../../components/SectionHeader';
 import PrimaryButton from '../../components/PrimaryButton';
+import { detectionCount } from '../../components/detections';
 
 type Props = NativeStackScreenProps<HistoryStackParamList, 'VehicleList'>;
 
@@ -21,16 +22,16 @@ type VehicleSummary = {
   vehicle: Vehicle;
   sessionCount: number;
   repairCount: number;
-  maxScore: number;
+  findings: number;
 };
 
 function summarize(vehicles: Vehicle[], sessions: AnalysisSession[]): VehicleSummary[] {
   return vehicles.map((v) => {
     const matching = sessions.filter((s) => s.vehicleId === v.id);
     const repairCount = matching.reduce((sum, s) => sum + (s.repairs?.length ?? 0), 0);
-    let maxScore = 0;
-    for (const s of matching) for (const p of s.photos) maxScore = Math.max(maxScore, p.result.damage_score);
-    return { vehicle: v, sessionCount: matching.length, repairCount, maxScore };
+    let findings = 0;
+    for (const s of matching) for (const p of s.photos) findings += detectionCount(p.result);
+    return { vehicle: v, sessionCount: matching.length, repairCount, findings };
   });
 }
 
@@ -89,7 +90,7 @@ export default function VehicleListScreen({ navigation }: Props) {
                 <Text style={{ fontFamily: t.font, fontWeight: t.fw.semibold, fontSize: t.fs.body, color: t.fg1 }}>
                   {vehicleDisplayName(item.vehicle)}
                 </Text>
-                {item.maxScore > 0 ? <StatusBadge score={item.maxScore} /> : null}
+                {item.findings > 0 ? <StatusBadge color="neutral" label={`${item.findings} ${item.findings === 1 ? 'finding' : 'findings'}`} /> : null}
               </View>
               {item.vehicle.licensePlate ? (
                 <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 4 }}>{item.vehicle.licensePlate}</Text>

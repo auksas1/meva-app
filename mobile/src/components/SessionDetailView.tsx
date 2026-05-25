@@ -12,7 +12,7 @@ import EstimateLineItem from './EstimateLineItem';
 import SectionHeader from './SectionHeader';
 import LinkButton from './LinkButton';
 import DangerButton from './DangerButton';
-import { scoreColor, severityLabel } from './severity';
+import { getDetections, detectionCount, prettifyLabel, requiresReview } from './detections';
 
 type Props = {
   session: AnalysisSession;
@@ -28,7 +28,23 @@ type Props = {
 };
 
 function totalDamages(session: AnalysisSession): number {
-  return session.photos.reduce((sum, p) => sum + (p.result.damage_zones?.length ?? 0), 0);
+  return session.photos.reduce((sum, p) => sum + detectionCount(p.result), 0);
+}
+
+/** Highest-confidence damage type across all photos in the session. */
+function sessionPrimaryDamage(session: AnalysisSession): string | null {
+  let topLabel: string | null = null;
+  let topConf = -1;
+  for (const p of session.photos) {
+    for (const d of getDetections(p.result)) {
+      if (d.confidence > topConf) { topConf = d.confidence; topLabel = d.label; }
+    }
+  }
+  return topLabel ? prettifyLabel(topLabel) : null;
+}
+
+function sessionNeedsReview(session: AnalysisSession): boolean {
+  return session.photos.some((p) => requiresReview(p.result));
 }
 
 export function dedupedPartCosts(session: AnalysisSession): Map<string, number> {
@@ -47,10 +63,6 @@ function totalEstimate(session: AnalysisSession): number | null {
   const parts = dedupedPartCosts(session);
   if (parts.size === 0) return null;
   return Array.from(parts.values()).reduce((a, b) => a + b, 0);
-}
-
-function maxScore(session: AnalysisSession): number {
-  return session.photos.reduce((m, p) => Math.max(m, p.result.damage_score), 0);
 }
 
 function totalActualSpent(session: AnalysisSession): number | null {
@@ -72,7 +84,8 @@ export default function SessionDetailView({
   const { tokens: t } = useTheme();
   const damages = totalDamages(session);
   const estimate = totalEstimate(session);
-  const max = maxScore(session);
+  const primary = sessionPrimaryDamage(session);
+  const needsReview = sessionNeedsReview(session);
   const spent = totalActualSpent(session);
   const repairs = session.repairs ?? [];
   const dedupedParts = dedupedPartCosts(session);
@@ -135,11 +148,17 @@ export default function SessionDetailView({
           borderTopWidth: 1, borderTopColor: t.hairline,
         }}>
           <StatBlock label="Photos" value={String(session.photos.length)} />
-          <StatBlock label="Damages" value={String(damages)} />
+          <StatBlock label="Detections" value={String(damages)} />
           <View style={{ flex: 1 }}>
-            <Text style={overlineStyle(t)}>Severity</Text>
+            <Text style={overlineStyle(t)}>{needsReview ? 'Status' : 'Main damage'}</Text>
             <View style={{ marginTop: 6 }}>
-              <StatusBadge score={max} />
+              {needsReview ? (
+                <StatusBadge color="warning" label="Review" />
+              ) : primary ? (
+                <StatusBadge color="neutral" label={primary} />
+              ) : (
+                <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg5 }}>—</Text>
+              )}
             </View>
           </View>
         </View>
@@ -149,9 +168,9 @@ export default function SessionDetailView({
       <SectionHeader title="Photos" action={<LinkButton onPress={onAddPhotos} leftIcon="add">Add</LinkButton>} />
       <View style={{ gap: 10 }}>
         {session.photos.map((p, idx) => {
-          const score = p.result.damage_score;
-          const zones = p.result.damage_zones?.length ?? 0;
+          const detCount = detectionCount(p.result);
           const parts = p.result.affected_parts?.length ?? 0;
+          const photoPrimary = detCount > 0 ? prettifyLabel(getDetections(p.result)[0]?.label ?? '') : null;
           return (
             <Card key={`${p.result.id}-${idx}`} onPress={() => onPhotoPress(idx)} padding={12} style={{ flexDirection: 'row', alignItems: 'center' }}>
               <View style={{ position: 'relative' }}>
@@ -160,19 +179,25 @@ export default function SessionDetailView({
                   position: 'absolute', bottom: 6, left: 6,
                   paddingHorizontal: 8, paddingVertical: 2, borderRadius: t.rPill,
                   backgroundColor: 'rgba(0,0,0,0.7)',
+                  flexDirection: 'row', alignItems: 'center',
                 }}>
+                  <Ionicons name="scan-outline" size={11} color="#fff" style={{ marginRight: 4 }} />
                   <Text style={{ color: '#fff', fontFamily: t.font, fontWeight: t.fw.bold, fontSize: 11 }}>
-                    {Math.round(score * 100)}%
+                    {detCount}
                   </Text>
                 </View>
               </View>
               <View style={{ flex: 1, marginLeft: 14 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 6 }}>
                   <Text style={{ fontFamily: t.font, fontWeight: t.fw.semibold, fontSize: t.fs.body, color: t.fg1, marginRight: 8 }}>Photo {idx + 1}</Text>
-                  <StatusBadge score={score} />
+                  {detCount === 0 ? (
+                    <StatusBadge color="success" label="No damage" />
+                  ) : photoPrimary ? (
+                    <StatusBadge color="neutral" label={photoPrimary} />
+                  ) : null}
                 </View>
                 <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg4 }}>
-                  {zones} {zones === 1 ? 'zone' : 'zones'} · {parts} {parts === 1 ? 'part' : 'parts'}
+                  {detCount} {detCount === 1 ? 'detection' : 'detections'} · {parts} {parts === 1 ? 'part' : 'parts'}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={t.fg5} />

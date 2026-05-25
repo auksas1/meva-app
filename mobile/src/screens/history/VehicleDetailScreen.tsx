@@ -16,6 +16,7 @@ import SectionHeader from '../../components/SectionHeader';
 import LinkButton from '../../components/LinkButton';
 import EmptyState from '../../components/EmptyState';
 import StatusBadge from '../../components/StatusBadge';
+import { detectionCount } from '../../components/detections';
 
 type Props = NativeStackScreenProps<HistoryStackParamList, 'VehicleDetail'>;
 
@@ -32,7 +33,7 @@ function formatDate(iso: string): string {
 }
 
 function totalDamages(s: AnalysisSession): number {
-  return s.photos.reduce((sum, p) => sum + (p.result.damage_zones?.length ?? 0), 0);
+  return s.photos.reduce((sum, p) => sum + detectionCount(p.result), 0);
 }
 
 function totalEstimate(s: AnalysisSession): number | null {

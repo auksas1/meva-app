@@ -12,7 +12,18 @@ import Card from '../../components/Card';
 import SectionHeader from '../../components/SectionHeader';
 import EstimateLineItem from '../../components/EstimateLineItem';
 import DangerButton from '../../components/DangerButton';
-import { scoreColor, severityLabel } from '../../components/severity';
+import {
+  getDetections,
+  detectionCount,
+  prettifyLabel,
+  confidenceLabel,
+  confidencePercent,
+  confidenceColor,
+  getRecommendation,
+  getAnnotatedImage,
+  analysisNotice,
+  noticeColors,
+} from '../../components/detections';
 
 type ResultDetailRoute = RouteProp<
   { ResultDetail: { sessionId: string; photoIndex: number } },
@@ -24,12 +35,12 @@ function formatDate(iso: string): string {
 }
 
 function damageBreakdown(result: AnalysisResponse): string {
-  const zones = result.damage_zones ?? [];
-  if (zones.length === 0) return '—';
+  const dets = getDetections(result);
+  if (dets.length === 0) return 'No damage detected';
   const counts = new Map<string, number>();
-  for (const z of zones) counts.set(z.label, (counts.get(z.label) ?? 0) + 1);
+  for (const d of dets) counts.set(d.label, (counts.get(d.label) ?? 0) + 1);
   return Array.from(counts.entries())
-    .map(([label, n]) => `${n} ${label.toLowerCase()}${n > 1 ? 's' : ''}`)
+    .map(([label, n]) => `${n} ${prettifyLabel(label).toLowerCase()}${n > 1 ? 's' : ''}`)
     .join(' · ');
 }
 
@@ -86,10 +97,15 @@ export default function ResultDetailScreen() {
   };
 
   const { result, localUri } = photo;
-  const scorePct = Math.round(result.damage_score * 100);
-  const zones = result.damage_zones ?? [];
+  // Prefer a backend-annotated (pre-framed) image; fall back to the local photo.
+  const imageUri = getAnnotatedImage(result) ?? localUri;
+  const detections = getDetections(result);
+  const count = detectionCount(result);
   const parts = result.affected_parts ?? [];
   const total = typeof result.total_estimated_cost === 'number' ? result.total_estimated_cost : null;
+  const recommendation = getRecommendation(result);
+  const notice = analysisNotice(result);
+  const confColorMap = { success: t.success, warning: t.warning, neutral: t.fg4 } as const;
 
   return (
     <ScrollView style={{ flex: 1, backgroundColor: t.bg }} contentContainerStyle={{ padding: t.screenPad, paddingBottom: 28 }}>
@@ -103,80 +119,112 @@ export default function ResultDetailScreen() {
         </Text>
       </View>
 
-      {/* Hero image with overlay severity */}
+      {/* Hero image with bounding boxes */}
       <View style={{
         borderRadius: t.rLg, overflow: 'hidden',
         borderWidth: 1, borderColor: t.hairline,
         shadowColor: t.shadowColor, shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 4 },
         elevation: 4,
       }}>
-        <Image source={{ uri: localUri }} style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: t.surface3 }} resizeMode="cover" />
-        {/* Severity chip */}
-        <View style={{
-          position: 'absolute', top: 12, left: 12,
-          paddingHorizontal: 12, paddingVertical: 6,
-          borderRadius: t.rPill,
-          backgroundColor: 'rgba(0,0,0,0.55)',
-          flexDirection: 'row', alignItems: 'center',
-        }}>
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: scoreColor(result.damage_score, t), marginRight: 6 }} />
-          <Text style={{ color: '#fff', fontFamily: t.font, fontSize: t.fs.caption, fontWeight: t.fw.semibold }}>{severityLabel(result.damage_score)}</Text>
-        </View>
-        {/* Score chip */}
+        <Image source={{ uri: imageUri }} style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: t.surface3 }} resizeMode="cover" />
+        {/* Detections count chip */}
         <View style={{
           position: 'absolute', top: 12, right: 12,
           paddingHorizontal: 12, paddingVertical: 6,
           borderRadius: t.rPill,
           backgroundColor: 'rgba(0,0,0,0.55)',
+          flexDirection: 'row', alignItems: 'center',
         }}>
-          <Text style={{ color: '#fff', fontFamily: t.font, fontSize: t.fs.meta, fontWeight: t.fw.bold }}>{scorePct}%</Text>
+          <Ionicons name="scan-outline" size={13} color="#fff" style={{ marginRight: 6 }} />
+          <Text style={{ color: '#fff', fontFamily: t.font, fontSize: t.fs.caption, fontWeight: t.fw.semibold }}>
+            {count} {count === 1 ? 'detection' : 'detections'}
+          </Text>
         </View>
       </View>
 
-      {/* Detected damage */}
-      <SectionHeader title="Detected damage" hint={damageBreakdown(result)} />
-      <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 }}>
-        {zones.length === 0 ? (
-          <Text style={{ paddingVertical: 14, color: t.fg5, fontStyle: 'italic', fontFamily: t.font }}>No zones detected.</Text>
-        ) : zones.map((z, i) => (
-          <View key={`${z.label}-${i}`} style={{
-            flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-            paddingVertical: 12,
-            borderBottomWidth: i === zones.length - 1 ? 0 : 1,
-            borderBottomColor: t.hairline,
-          }}>
-            <Text style={{ fontFamily: t.font, fontSize: t.fs.body, color: t.fg1 }}>{z.label}</Text>
-            <Text style={{ fontFamily: t.font, fontSize: t.fs.body, color: t.fg3, fontWeight: t.fw.semibold }}>{Math.round(z.confidence * 100)}%</Text>
-          </View>
-        ))}
-      </Card>
-
-      {/* Affected parts */}
-      <SectionHeader title="Affected parts" />
-      <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
-        {parts.length === 0 ? (
-          <Text style={{ paddingVertical: 14, color: t.fg5, fontStyle: 'italic', fontFamily: t.font }}>—</Text>
-        ) : parts.map((p, i) => (
-          <EstimateLineItem key={`${p.name}-${i}`} label={p.name} value={typeof p.estimated_cost === 'number' ? `€${p.estimated_cost.toFixed(0)}` : '—'} />
-        ))}
-        {total !== null ? <EstimateLineItem total label="Total (this photo)" value={`€${total.toFixed(0)}`} /> : null}
-      </Card>
-
-      {/* Recommendation */}
-      <SectionHeader title="Recommendation" />
-      <Card padding={16} style={{ backgroundColor: t.primarySubtle, borderColor: t.primary + '33' }}>
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          <View style={{
-            width: 32, height: 32, borderRadius: 10, backgroundColor: t.primary,
-            alignItems: 'center', justifyContent: 'center', marginRight: 12,
-          }}>
-            <Ionicons name="sparkles" size={18} color="#fff" />
-          </View>
-          <Text style={{ flex: 1, fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, lineHeight: 22 }}>
-            {result.repair_recommendation ?? '—'}
+      {/* Analysis state notice (no damage / poor quality / needs review) */}
+      {notice ? (
+        <View style={{
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: noticeColors(notice.tone, t).bg,
+          borderRadius: t.rMd, paddingHorizontal: 14, paddingVertical: 12, marginTop: 16,
+        }}>
+          <Ionicons
+            name={notice.tone === 'success' ? 'checkmark-circle-outline' : 'alert-circle-outline'}
+            size={18}
+            color={noticeColors(notice.tone, t).fg}
+            style={{ marginRight: 10 }}
+          />
+          <Text style={{ flex: 1, fontFamily: t.font, fontSize: t.fs.bodySm, color: noticeColors(notice.tone, t).fg, fontWeight: t.fw.medium }}>
+            {notice.text}
           </Text>
         </View>
-      </Card>
+      ) : null}
+
+      {/* Detected damage */}
+      {count > 0 ? (
+        <>
+          <SectionHeader title="Detected damage" hint={damageBreakdown(result)} />
+          <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 4 }}>
+            {detections.map((d, i) => {
+              const cColor = confColorMap[confidenceColor(d)];
+              return (
+                <View key={`${d.label}-${i}`} style={{
+                  flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                  paddingVertical: 12,
+                  borderBottomWidth: i === detections.length - 1 ? 0 : 1,
+                  borderBottomColor: t.hairline,
+                }}>
+                  <Text style={{ fontFamily: t.font, fontSize: t.fs.body, color: t.fg1, flex: 1, marginRight: 12 }}>
+                    {prettifyLabel(d.label)}
+                  </Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline' }}>
+                    <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: cColor, fontWeight: t.fw.semibold }}>
+                      {confidenceLabel(d)}
+                    </Text>
+                    <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginLeft: 6 }}>
+                      {confidencePercent(d)}
+                    </Text>
+                  </View>
+                </View>
+              );
+            })}
+          </Card>
+        </>
+      ) : null}
+
+      {/* Affected parts */}
+      {parts.length > 0 ? (
+        <>
+          <SectionHeader title="Affected parts" />
+          <Card padding={{ paddingHorizontal: 16, paddingTop: 4, paddingBottom: 14 }}>
+            {parts.map((p, i) => (
+              <EstimateLineItem key={`${p.name}-${i}`} label={p.name} value={typeof p.estimated_cost === 'number' ? `€${p.estimated_cost.toFixed(0)}` : '—'} />
+            ))}
+            {total !== null ? <EstimateLineItem total label="Total (this photo)" value={`€${total.toFixed(0)}`} /> : null}
+          </Card>
+        </>
+      ) : null}
+
+      {/* Recommendation */}
+      {recommendation ? (
+        <>
+          <SectionHeader title="Recommendation" />
+          <Card padding={16} style={{ backgroundColor: t.primarySubtle, borderColor: t.primary + '33' }}>
+            <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+              <View style={{
+                width: 32, height: 32, borderRadius: 10, backgroundColor: t.primary,
+                alignItems: 'center', justifyContent: 'center', marginRight: 12,
+              }}>
+                <Ionicons name="sparkles" size={18} color="#fff" />
+              </View>
+              <Text style={{ flex: 1, fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, lineHeight: 22 }}>
+                {recommendation}
+              </Text>
+            </View>
+          </Card>
+        </>
+      ) : null}
 
       {/* Delete photo */}
       <View style={{ marginTop: 24 }}>

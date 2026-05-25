@@ -38,13 +38,6 @@ export default function PickVehicleScreen({ navigation, route }: Props) {
     (async () => {
       const all = await getVehicles();
       setVehicles(all);
-      // Pre-fill new-vehicle form from AI guess on first photo.
-      const first = photos[0]?.result;
-      if (first) {
-        setBrand(first.vehicle_brand ?? '');
-        setModel(first.vehicle_model ?? '');
-        setYear(first.vehicle_year !== undefined ? String(first.vehicle_year) : '');
-      }
       // If user already has vehicles, default to picking from them.
       setMode(all.length > 0 ? 'pick' : 'create');
       setLoading(false);
@@ -134,7 +127,7 @@ export default function PickVehicleScreen({ navigation, route }: Props) {
         )
       ) : (
         <Card padding={16}>
-          <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginBottom: 14 }}>AI guess pre-filled — adjust if wrong.</Text>
+          <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginBottom: 14 }}>Enter the vehicle details.</Text>
 
           <Field label="Brand">
             <Input value={brand} onChangeText={setBrand} placeholder="e.g. Toyota" autoCapitalize="words" />

@@ -25,8 +25,11 @@ import PrimaryButton from '../components/PrimaryButton';
 import SecondaryButton from '../components/SecondaryButton';
 import DangerButton from '../components/DangerButton';
 
-// ---- Dev-tools test-session generator (ported from the original screen) ----
-const FAKE_LABELS = ['Dent', 'Scratch', 'Crack', 'Bumper damage', 'Broken light'];
+// ---- Dev-tools test-session generator ----
+// Emits the new AI contract shape and rotates through the agreed states so the
+// UI (boxes, worded confidence, recommendation, no-damage / poor-quality /
+// review banners) can be demoed without a live endpoint.
+const MODEL_CLASSES = ['Broken Part', 'Crack', 'Dent', 'Paint Damage', 'Rust_Corrision', 'Scratch', 'Tire Damage'];
 const FAKE_PARTS = [
   { name: 'Front bumper', cost: 420 },
   { name: 'Right headlight', cost: 180 },
@@ -42,50 +45,88 @@ const FAKE_VEHICLES = [
   { brand: 'Honda', model: 'Civic', year: 2019 },
   { brand: 'Audi', model: 'A4', year: 2021 },
 ];
-const FAKE_RECOMMENDATIONS = [
-  'Cosmetic damage — touch-up paint should be sufficient.',
-  'Moderate damage — recommend body shop inspection.',
-  'Significant damage — professional repair strongly advised before driving.',
-];
+
+const CONF_TEXT = {
+  high: 'high confidence',
+  medium: 'medium confidence',
+  low: 'low confidence',
+  insufficient: 'insufficient confidence',
+} as const;
+const CONF_VALUE = { high: 0.82, medium: 0.55, low: 0.3, insufficient: 0.15 } as const;
 
 function pick<T>(arr: T[], seed: number): T {
   return arr[Math.abs(seed) % arr.length];
 }
 
-function makeFakePhoto(seed: number, vehicle: (typeof FAKE_VEHICLES)[number]): AnalyzedPhoto {
-  const zoneCount = 1 + (seed % 4);
-  const zones = Array.from({ length: zoneCount }, (_, i) => ({
-    label: FAKE_LABELS[(seed + i) % FAKE_LABELS.length],
-    confidence: 0.5 + Math.random() * 0.5,
-    bbox: [0.1, 0.2, 0.5, 0.6] as [number, number, number, number],
-  }));
+// Normalized [x1,y1,x2,y2] boxes placed in a simple 2-column grid.
+function fakeBbox(i: number): [number, number, number, number] {
+  const col = i % 2;
+  const row = Math.floor(i / 2) % 2;
+  const x1 = 0.08 + col * 0.46;
+  const y1 = 0.1 + row * 0.44;
+  return [x1, y1, x1 + 0.36, y1 + 0.34];
+}
+
+function makeFakePhoto(seed: number): AnalyzedPhoto {
+  const mode = seed % 4; // 0 normal · 1 no damage · 2 poor quality · 3 needs review
+  const localUri = `https://picsum.photos/seed/meva${seed}-${Date.now()}/640/480`;
+  const base = { id: Math.floor(Math.random() * 100000), image_filename: `test_${seed}.jpg`, created_at: new Date().toISOString() };
+
+  if (mode === 1) {
+    const result: AnalysisResponse = {
+      ...base,
+      status: 'no_damage',
+      summary: { detections_count: 0, analysis_quality: 'good', requires_manual_review: false },
+      detections: [],
+      recommendation: { message: 'No visible damage was detected.' },
+    };
+    return { localUri, result };
+  }
+
+  const tier: keyof typeof CONF_VALUE = mode === 2 ? 'low' : mode === 3 ? 'insufficient' : seed % 2 ? 'high' : 'medium';
+  const detCount = 1 + (seed % 3);
+  const detections = Array.from({ length: detCount }, (_, i) => {
+    const jitter = (Math.random() - 0.5) * 0.08;
+    return {
+      label: MODEL_CLASSES[(seed + i) % MODEL_CLASSES.length],
+      confidence: Math.min(0.99, Math.max(0.05, CONF_VALUE[tier] + jitter)),
+      confidence_text: CONF_TEXT[tier],
+      bbox: fakeBbox(i),
+    };
+  });
+
   const partCount = 1 + (seed % 3);
   const parts = Array.from({ length: partCount }, (_, i) => {
     const p = FAKE_PARTS[(seed + i) % FAKE_PARTS.length];
     return { name: p.name, estimated_cost: p.cost };
   });
   const total = parts.reduce((sum, p) => sum + (p.estimated_cost ?? 0), 0);
-  const score = Math.random();
-  const recIndex = score >= 0.66 ? 2 : score >= 0.33 ? 1 : 0;
+
+  const quality = mode === 2 ? 'poor' : 'good';
+  const review = mode === 3;
+  const message = mode === 2
+    ? 'Consider uploading a clearer image.'
+    : mode === 3
+      ? 'A service inspection is recommended.'
+      : 'Please review the highlighted areas.';
+
+  const status = mode === 2 ? 'poor_image_quality' : mode === 3 ? 'low_confidence' : 'damage_detected';
 
   const result: AnalysisResponse = {
-    id: Math.floor(Math.random() * 100000),
-    image_filename: `test_${seed}.jpg`,
-    damage_score: score,
-    damage_zones: zones,
-    status: 'completed',
-    created_at: new Date().toISOString(),
-    vehicle_brand: vehicle.brand,
-    vehicle_model: vehicle.model,
-    vehicle_year: vehicle.year,
+    ...base,
+    status,
+    summary: {
+      detections_count: detections.length,
+      primary_damage: detections[0].label,
+      analysis_quality: quality,
+      requires_manual_review: review,
+    },
+    detections,
+    recommendation: { message },
     affected_parts: parts,
     total_estimated_cost: total,
-    repair_recommendation: FAKE_RECOMMENDATIONS[recIndex],
   };
-  return {
-    localUri: `https://picsum.photos/seed/meva${seed}-${Date.now()}/640/480`,
-    result,
-  };
+  return { localUri, result };
 }
 
 export default function SettingsScreen() {
@@ -164,7 +205,7 @@ export default function SettingsScreen() {
       const seedBase = Math.floor(Math.random() * 1000);
       const fakeVehicle = pick(FAKE_VEHICLES, seedBase);
       const photos = Array.from({ length: count }, (_, i) =>
-        makeFakePhoto(seedBase + i + 1, fakeVehicle),
+        makeFakePhoto(seedBase + i + 1),
       );
 
       // Reuse existing vehicle if one matches by brand+model+year, else create new.
