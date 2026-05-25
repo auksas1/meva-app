@@ -14,9 +14,24 @@ router = APIRouter(prefix="/analysis", tags=["analysis"])
 _MAX_FILE_BYTES = 10 * 1024 * 1024  # 10 MB
 
 
+_SERIOUS_CLASSES = {"Broken Part", "Tire Damage", "Crack"}
+
+
 def _to_response(record: Analysis) -> AnalysisResponse:
     damage_zones = json.loads(record.damage_zones) if record.damage_zones else []
     affected_parts = json.loads(record.affected_parts) if record.affected_parts else None
+
+    primary_damage: str | None = None
+    if damage_zones:
+        best = max(damage_zones, key=lambda z: z.get("confidence", 0))
+        primary_damage = best.get("label")
+
+    damage_score = record.damage_score or 0.0
+    requires_manual_review = (
+        damage_score >= 0.7
+        or any(z.get("label") in _SERIOUS_CLASSES for z in damage_zones)
+    )
+
     return AnalysisResponse(
         id=record.id,
         vehicle_id=record.vehicle_id,
@@ -28,6 +43,9 @@ def _to_response(record: Analysis) -> AnalysisResponse:
         repair_recommendation=record.repair_recommendation,
         status=record.status,
         created_at=record.created_at,
+        primary_damage=primary_damage,
+        detections_count=len(damage_zones),
+        requires_manual_review=requires_manual_review,
     )
 
 

@@ -1,5 +1,6 @@
 import io
 import json
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -9,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.database import Base, get_db
 from app.main import app
+from app.schemas.analysis import DamageZone
 
 TEST_DATABASE_URL = "sqlite:///:memory:"
 
@@ -33,6 +35,26 @@ def setup_db():
     Base.metadata.create_all(bind=test_engine)
     yield
     Base.metadata.drop_all(bind=test_engine)
+
+
+_STUB_INFERENCE_RESULT = {
+    "damage_score": 0.65,
+    "damage_zones": [
+        DamageZone(label="Dent", confidence=0.91, bbox=[0.1, 0.2, 0.4, 0.5],
+                   label_lt="Įlenkimas", confidence_text="High"),
+        DamageZone(label="Scratch", confidence=0.78, bbox=[0.5, 0.3, 0.8, 0.6],
+                   label_lt="Įbrėžimas", confidence_text="Medium"),
+    ],
+    "affected_parts": [{"name": "Body panel", "estimated_cost": 280}],
+    "total_estimated_cost": 280.0,
+    "repair_recommendation": "Moderate damage — body shop inspection recommended.",
+}
+
+
+@pytest.fixture(autouse=True)
+def mock_inference():
+    with patch("app.routers.analysis.run_inference", return_value=_STUB_INFERENCE_RESULT):
+        yield
 
 
 @pytest.fixture()

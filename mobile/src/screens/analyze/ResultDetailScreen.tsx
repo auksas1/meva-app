@@ -1,4 +1,5 @@
 import React, { useCallback, useState } from 'react';
+import type { LayoutChangeEvent } from 'react-native';
 import { View, Text, Image, ScrollView, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useNavigation, useRoute, type RouteProp } from '@react-navigation/native';
@@ -12,6 +13,7 @@ import Card from '../../components/Card';
 import SectionHeader from '../../components/SectionHeader';
 import EstimateLineItem from '../../components/EstimateLineItem';
 import DangerButton from '../../components/DangerButton';
+import BboxOverlay from '../../components/BboxOverlay';
 import {
   getDetections,
   detectionCount,
@@ -53,6 +55,8 @@ export default function ResultDetailScreen() {
   const [session, setSession] = useState<AnalysisSession | null>(null);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
+  const [imageLayout, setImageLayout] = useState<{ width: number; height: number } | null>(null);
+  const [naturalSize, setNaturalSize] = useState<{ width: number; height: number } | null>(null);
 
   useFocusEffect(
     useCallback(() => {
@@ -120,13 +124,31 @@ export default function ResultDetailScreen() {
       </View>
 
       {/* Hero image with bounding boxes */}
-      <View style={{
-        borderRadius: t.rLg, overflow: 'hidden',
-        borderWidth: 1, borderColor: t.hairline,
-        shadowColor: t.shadowColor, shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 4 },
-        elevation: 4,
-      }}>
-        <Image source={{ uri: imageUri }} style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: t.surface3 }} resizeMode="cover" />
+      <View
+        onLayout={(e: LayoutChangeEvent) => setImageLayout({ width: e.nativeEvent.layout.width, height: e.nativeEvent.layout.height })}
+        style={{
+          borderRadius: t.rLg, overflow: 'hidden',
+          borderWidth: 1, borderColor: t.hairline,
+          shadowColor: t.shadowColor, shadowOpacity: 0.08, shadowRadius: 14, shadowOffset: { width: 0, height: 4 },
+          elevation: 4,
+        }}>
+        <Image
+          source={{ uri: imageUri }}
+          style={{ width: '100%', aspectRatio: 4 / 3, backgroundColor: t.surface3 }}
+          resizeMode="contain"
+          onLoad={(e) =>
+            setNaturalSize({ width: e.nativeEvent.source.width, height: e.nativeEvent.source.height })
+          }
+        />
+        {detections.length > 0 && imageLayout && naturalSize && (
+          <BboxOverlay
+            detections={detections}
+            containerWidth={imageLayout.width}
+            containerHeight={imageLayout.height}
+            imageNaturalWidth={naturalSize.width}
+            imageNaturalHeight={naturalSize.height}
+          />
+        )}
         {/* Detections count chip */}
         <View style={{
           position: 'absolute', top: 12, right: 12,

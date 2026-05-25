@@ -227,3 +227,7 @@ dist/
 # Project-specific
 *.pdf
 CLAUDE.md
+
+# Model weights — large binary, distribute separately
+*.pt
+*.pth

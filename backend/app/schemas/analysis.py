@@ -10,6 +10,8 @@ class DamageZone(BaseModel):
     label: str
     confidence: float
     bbox: list[float]  # [x1, y1, x2, y2] normalised 0-1
+    label_lt: Optional[str] = None
+    confidence_text: Optional[str] = None
 
 
 class AffectedPart(BaseModel):
@@ -37,6 +39,9 @@ class AnalysisResponse(BaseModel):
     affected_parts: Optional[list[AffectedPart]] = None
     total_estimated_cost: Optional[float] = None
     repair_recommendation: Optional[str] = None
+    primary_damage: Optional[str] = None
+    detections_count: int = 0
+    requires_manual_review: bool = False
 
     class Config:
         from_attributes = True
