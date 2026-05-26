@@ -1,7 +1,7 @@
 import React from 'react';
-import { View, Text, Image, ScrollView, Alert, Pressable } from 'react-native';
+import { View, Text, Image, ScrollView, Alert, Pressable, TextInput, Linking } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import type { AnalysisSession, RepairRecord, Vehicle } from '../types/analysis';
+import type { AnalysisSession, PartSearchResult, RepairRecord, Vehicle } from '../types/analysis';
 import { vehicleDisplayName } from '../services/vehicleStorage';
 import { deleteRepair } from '../services/historyStorage';
 import { useTheme } from '../theme';
@@ -13,6 +13,7 @@ import SectionHeader from './SectionHeader';
 import LinkButton from './LinkButton';
 import DangerButton from './DangerButton';
 import { getDetections, detectionCount, prettifyLabel, requiresReview } from './detections';
+import { searchPriceLinks } from '../services/api';
 
 type Props = {
   session: AnalysisSession;
@@ -89,6 +90,29 @@ export default function SessionDetailView({
   const spent = totalActualSpent(session);
   const repairs = session.repairs ?? [];
   const dedupedParts = dedupedPartCosts(session);
+
+  const [carQuery, setCarQuery] = React.useState<string>(() => {
+    const parts = [vehicle?.brand, vehicle?.model, vehicle?.year?.toString()].filter(Boolean);
+    return parts.join(' ');
+  });
+  const [priceResults, setPriceResults] = React.useState<PartSearchResult[] | null>(null);
+  const [priceLoading, setPriceLoading] = React.useState(false);
+  const [priceError, setPriceError] = React.useState<string | null>(null);
+
+  const handleFindPrices = async () => {
+    const names = Array.from(dedupedParts.keys());
+    if (!names.length || !carQuery.trim()) return;
+    setPriceLoading(true);
+    setPriceError(null);
+    try {
+      const res = await searchPriceLinks(names, carQuery.trim());
+      setPriceResults(res.results);
+    } catch {
+      setPriceError('Could not fetch links. Check connection.');
+    } finally {
+      setPriceLoading(false);
+    }
+  };
 
   const handleDeleteRepair = (repair: RepairRecord) => {
     Alert.alert('Delete repair?', 'This record will be removed.', [
@@ -216,6 +240,91 @@ export default function SessionDetailView({
             ))}
             <EstimateLineItem total label="Total estimate" value={`€${(estimate ?? 0).toFixed(0)}`} />
           </Card>
+
+          {/* Price finder */}
+          <View style={{ marginTop: 12, gap: 8 }}>
+            <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, fontWeight: t.fw.semibold }}>
+              Find prices by car model
+            </Text>
+            <TextInput
+              value={carQuery}
+              onChangeText={setCarQuery}
+              placeholder="e.g. Volkswagen Golf 2018"
+              placeholderTextColor={t.fg5}
+              style={{
+                fontFamily: t.font,
+                fontSize: t.fs.meta,
+                color: t.fg1,
+                backgroundColor: t.surface2,
+                borderWidth: 1,
+                borderColor: t.hairline,
+                borderRadius: t.rMd,
+                paddingHorizontal: 12,
+                paddingVertical: 10,
+              }}
+            />
+            <Pressable
+              onPress={handleFindPrices}
+              disabled={priceLoading || !carQuery.trim()}
+              style={({ pressed }) => ({
+                backgroundColor: priceLoading || !carQuery.trim() ? t.surface3 : t.primary,
+                borderRadius: t.rMd,
+                paddingVertical: 11,
+                alignItems: 'center',
+                opacity: pressed ? 0.8 : 1,
+              })}
+            >
+              <Text style={{
+                fontFamily: t.font,
+                fontWeight: t.fw.semibold,
+                fontSize: t.fs.meta,
+                color: priceLoading || !carQuery.trim() ? t.fg5 : '#fff',
+              }}>
+                {priceLoading ? 'Loading…' : 'Find prices'}
+              </Text>
+            </Pressable>
+            {priceError ? (
+              <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.severe }}>{priceError}</Text>
+            ) : null}
+            {priceResults && priceResults.length > 0 ? (
+              <View style={{ gap: 14, marginTop: 4 }}>
+                {priceResults.map((r) => (
+                  <View key={r.part_name_en}>
+                    <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg3, fontWeight: t.fw.semibold, marginBottom: 6 }}>
+                      {r.part_name_en} · {r.part_name_lt}
+                    </Text>
+                    {r.results.length === 0 ? (
+                      <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5 }}>No results found.</Text>
+                    ) : (
+                      <View style={{ gap: 6 }}>
+                        {r.results.map((item, i) => (
+                          <Pressable
+                            key={i}
+                            onPress={() => Linking.openURL(item.url)}
+                            style={({ pressed }) => ({
+                              borderWidth: 1,
+                              borderColor: t.hairline,
+                              borderRadius: t.rMd,
+                              paddingHorizontal: 12,
+                              paddingVertical: 9,
+                              backgroundColor: pressed ? t.surface2 : t.surface1,
+                            })}
+                          >
+                            <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg1, fontWeight: t.fw.medium }} numberOfLines={2}>
+                              {item.title}
+                            </Text>
+                            <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.primary, marginTop: 2 }} numberOfLines={1}>
+                              {item.url.replace(/^https?:\/\//, '')}
+                            </Text>
+                          </Pressable>
+                        ))}
+                      </View>
+                    )}
+                  </View>
+                ))}
+              </View>
+            ) : null}
+          </View>
         </>
       ) : null}
 

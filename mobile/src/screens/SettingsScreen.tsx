@@ -4,7 +4,7 @@ import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { SettingsStackParamList } from '../navigation/types';
 import { DEFAULT_BACKEND_URL, IMAGE_QUALITY_PRESETS, type ImageQuality } from '../constants/config';
-import { healthCheck, type AnalysisResponse } from '../services/api';
+import { healthCheck, fetchDemoSessions, getBaseUrl, type AnalysisResponse } from '../services/api';
 import {
   getStoredBackendUrl, setStoredBackendUrl,
   getStoredImageQuality, setStoredImageQuality,
@@ -199,6 +199,24 @@ export default function SettingsScreen() {
     }, 'Sign out');
   };
 
+  const handleLoadDemo = async () => {
+    try {
+      const data = await fetchDemoSessions();
+      if (!data.sessions.length) { Alert.alert('No data', 'Backend returned no demo sessions.'); return; }
+      await clearHistory();
+      for (const s of data.sessions) {
+        const photos = s.photos.map((p) => ({
+          localUri: `${getBaseUrl()}/demo-photos/${p.image_filename}`,
+          result: p.result,
+        }));
+        await saveSession(String(s.vehicle_id), photos);
+      }
+      Alert.alert('Demo loaded', `${data.sessions.length} sessions imported from backend.`);
+    } catch (e) {
+      Alert.alert('Error', `Could not load demo sessions: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+
   const handleAddTestSession = async () => {
     try {
       const count = 1 + Math.floor(Math.random() * 3);
@@ -365,7 +383,10 @@ export default function SettingsScreen() {
           <Text style={{ fontFamily: t.font, fontSize: t.fs.meta, color: t.fg5 }}>Runtime</Text>
           <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg1, fontWeight: t.fw.semibold }}>React Native + Expo</Text>
         </View>
-        <View style={{ flexDirection: 'row', gap: 10, marginTop: 14 }}>
+        <View style={{ marginTop: 14, marginBottom: 10 }}>
+          <PrimaryButton onPress={handleLoadDemo}>Load demo sessions</PrimaryButton>
+        </View>
+        <View style={{ flexDirection: 'row', gap: 10 }}>
           <View style={{ flex: 1 }}>
             <SecondaryButton onPress={handleAddTestSession}>Add test</SecondaryButton>
           </View>

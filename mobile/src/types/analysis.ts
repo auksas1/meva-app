@@ -31,3 +31,13 @@ export type AnalysisSession = {
   photos: AnalyzedPhoto[];
   repairs?: RepairRecord[];
 };
+
+export type SearchResult = { title: string; url: string };
+
+export type PartSearchResult = {
+  part_name_en: string;
+  part_name_lt: string;
+  results: SearchResult[];
+};
+
+export type PriceSearchResponse = { results: PartSearchResult[] };

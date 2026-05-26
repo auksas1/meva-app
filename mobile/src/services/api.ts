@@ -1,4 +1,5 @@
 import { DEFAULT_BACKEND_URL, REQUEST_TIMEOUT_MS } from '../constants/config';
+import type { PriceSearchResponse } from '../types/analysis';
 
 // A single damage detection from the model.
 // `bbox` is assumed normalized [x1, y1, x2, y2] in 0..1 — confirm against the
@@ -199,6 +200,29 @@ export async function updateVehicleApi(id: number, data: VehiclePayload): Promis
 
 export async function deleteVehicleApi(id: number): Promise<void> {
   return request<void>(`/vehicles/${id}`, { method: 'DELETE' });
+}
+
+// --- Demo ---
+
+export type DemoPhoto = { image_filename: string; result: AnalysisResponse };
+export type DemoSession = { vehicle_id: number; photos: DemoPhoto[] };
+export type DemoSessionsResponse = { sessions: DemoSession[] };
+
+export async function fetchDemoSessions(): Promise<DemoSessionsResponse> {
+  return request<DemoSessionsResponse>('/demo/sessions');
+}
+
+// --- Prices ---
+
+export async function searchPriceLinks(
+  partNames: string[],
+  carQuery: string,
+): Promise<PriceSearchResponse> {
+  return request<PriceSearchResponse>('/prices/search-links', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ part_names: partNames, car_query: carQuery }),
+  });
 }
 
 // --- Health ---

@@ -227,6 +227,7 @@ dist/
 # Project-specific
 *.pdf
 CLAUDE.md
+*.db
 
 # Model weights — large binary, distribute separately
 *.pt
