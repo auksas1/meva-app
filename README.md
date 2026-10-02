@@ -39,13 +39,15 @@ This will free port 8000 if needed, start the backend, then launch Expo Metro. F
 ### First-time setup
 
 ```bash
-# Backend dependencies
+# Backend dependencies (start.sh picks up backend/.venv automatically)
 cd backend
-pip install -r requirements.txt
-cp .env.example .env
+python3 -m venv .venv          # Debian/Ubuntu: apt install python3-venv first
+.venv/bin/pip install -r requirements.txt
 ```
 
-Mobile dependencies are installed automatically by `start.sh` (`npm install`).
+**Model weights** are not in git (`*.pt` is ignored). Get `best_vehicle_damage_yolov8s_30e.pt` from the team and put it at `backend/ai/best_vehicle_damage_yolov8s_30e.pt`. Without it the app runs, but `POST /analysis/analyze` returns 503 and `seed_demo.py` can't run.
+
+`backend/.env` is created from `.env.example` and mobile dependencies are installed (`npm install`) automatically by `start.sh`.
 
 ### Backend only
 

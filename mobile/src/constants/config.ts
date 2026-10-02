@@ -1,8 +1,11 @@
+import { Platform } from 'react-native';
+
 // Default backend URL.
 // - Android emulator reaches host PC via 10.0.2.2 (mapped loopback).
 // - iOS simulator / web can use http://localhost:8000.
 // - Physical Expo Go device must use your LAN IP (set in Settings later).
-export const DEFAULT_BACKEND_URL = 'http://10.0.2.2:8000';
+export const DEFAULT_BACKEND_URL =
+  Platform.OS === 'android' ? 'http://10.0.2.2:8000' : 'http://localhost:8000';
 
 export const REQUEST_TIMEOUT_MS = 30_000;
 

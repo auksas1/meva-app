@@ -77,7 +77,10 @@ async def analyze_image(
     if len(image_bytes) > _MAX_FILE_BYTES:
         raise HTTPException(status_code=413, detail="File exceeds 10 MB limit")
 
-    inference_result = run_inference(image_bytes)
+    try:
+        inference_result = run_inference(image_bytes)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
     record = Analysis(
         image_filename=file.filename or "upload",

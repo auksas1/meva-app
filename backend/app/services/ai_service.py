@@ -84,7 +84,7 @@ def _confidence_text(conf: float) -> str:
 def run_inference(image_bytes: bytes) -> dict:
     """Run YOLOv8 damage detection on raw image bytes."""
     if _model is None:
-        raise RuntimeError("AI model is not loaded — check that the model file exists and ultralytics is installed")
+        raise RuntimeError(f"AI model is not loaded — place {_MODEL_PATH.name} in backend/ai/ (see README)")
 
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
     w, h = image.size
