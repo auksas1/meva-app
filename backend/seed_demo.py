@@ -12,8 +12,10 @@ from pathlib import Path
 # Make sure app imports resolve
 sys.path.insert(0, str(Path(__file__).parent))
 
+from app.auth import seed_users
 from app.database import Base, SessionLocal, engine
 from app.models.analysis import Analysis
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.services.ai_service import run_inference
 from app.services.price_service import search_price_links
@@ -59,10 +61,17 @@ def clear_db():
     print("DB cleared and tables recreated.")
 
 
+DEMO_USER_EMAIL = "demo@meva.lt"
+
+
 def seed(db):
+    seed_users(db)
+    owner = db.query(User).filter(User.email == DEMO_USER_EMAIL).one()
+    print(f"  Owner: {owner.email}")
+
     created_vehicles = []
     for vd in VEHICLES:
-        v = Vehicle(**vd)
+        v = Vehicle(**vd, user_id=owner.id)
         db.add(v)
         db.flush()
         created_vehicles.append(v)
@@ -82,6 +91,7 @@ def seed(db):
                 zones = result["damage_zones"]
                 parts = result["affected_parts"]
                 a = Analysis(
+                    user_id=owner.id,
                     vehicle_id=vehicle.id,
                     image_filename=f"{fname}.jpeg",
                     damage_score=result["damage_score"],

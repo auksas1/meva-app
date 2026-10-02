@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Text, View, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { SettingsStackParamList } from '../../navigation/types';
+import type { AuthStackParamList } from '../../navigation/types';
 import { register, AuthError } from '../../services/auth';
 import { useTheme } from '../../theme';
 import { Field, Input } from '../../components/Field';
@@ -9,7 +9,7 @@ import PrimaryButton from '../../components/PrimaryButton';
 import LinkButton from '../../components/LinkButton';
 import BrandStamp from '../../components/BrandStamp';
 
-type Props = NativeStackScreenProps<SettingsStackParamList, 'Register'>;
+type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 
 export default function RegisterScreen({ navigation }: Props) {
   const { tokens: t } = useTheme();
@@ -27,14 +27,9 @@ export default function RegisterScreen({ navigation }: Props) {
     setSubmitting(true);
     try {
       await register({ email, password, name });
-      navigation.goBack();
+      // AppNavigator swaps to the main tabs once the user is set.
     } catch (err) {
-      setError(
-        err instanceof AuthError ? err.message
-          : err instanceof Error ? err.message
-          : 'Could not create account. Please try again.',
-      );
-    } finally {
+      setError(err instanceof AuthError ? err.message : 'Could not create account. Please try again.');
       setSubmitting(false);
     }
   };

@@ -31,6 +31,9 @@ export type HistoryStackParamList = {
 
 export type SettingsStackParamList = {
   SettingsHome: undefined;
+};
+
+export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
 };

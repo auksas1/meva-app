@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { AnalysisSession, AnalyzedPhoto, RepairRecord } from '../types/analysis';
 import { patchAnalysis } from './api';
-import { createVehicle, getVehicles } from './vehicleStorage';
+import { currentUserId } from './auth';
 
-const KEY = 'meva.history';
+// Sessions are device-local, namespaced per signed-in user.
+const key = () => `meva.history.${currentUserId() ?? 'anon'}`;
 const MAX_SESSIONS = 100;
 
 function makeId(): string {
@@ -11,21 +12,12 @@ function makeId(): string {
 }
 
 async function writeAll(sessions: AnalysisSession[]): Promise<void> {
-  await AsyncStorage.setItem(KEY, JSON.stringify(sessions));
+  await AsyncStorage.setItem(key(), JSON.stringify(sessions));
 }
-
-type LegacySession = AnalysisSession & {
-  vehicleOverride?: {
-    brand?: string;
-    model?: string;
-    year?: number;
-    licensePlate?: string;
-  };
-};
 
 export async function getSessions(): Promise<AnalysisSession[]> {
   try {
-    const raw = await AsyncStorage.getItem(KEY);
+    const raw = await AsyncStorage.getItem(key());
     if (!raw) return [];
     const parsed = JSON.parse(raw) as AnalysisSession[];
     return Array.isArray(parsed) ? parsed : [];
@@ -158,61 +150,5 @@ export async function deleteRepair(sessionId: string, repairId: string): Promise
 }
 
 export async function clearHistory(): Promise<void> {
-  await AsyncStorage.removeItem(KEY);
-}
-
-/**
- * Migrates pre-vehicle sessions: any session without vehicleId is linked to a
- * Vehicle entity created from its legacy vehicleOverride (or AI guess from first photo).
- * Idempotent — runs on app boot.
- */
-export async function migrateLegacySessions(): Promise<void> {
-  try {
-    const raw = await AsyncStorage.getItem(KEY);
-    if (!raw) return;
-    const sessions = JSON.parse(raw) as LegacySession[];
-    if (!Array.isArray(sessions)) return;
-
-    let changed = false;
-    const existingVehicles = await getVehicles();
-
-    for (let i = 0; i < sessions.length; i++) {
-      const s = sessions[i];
-      if (s.vehicleId) continue;
-
-      const ov = s.vehicleOverride ?? {};
-      const firstResult = s.photos?.[0]?.result;
-      const brand = ov.brand ?? firstResult?.vehicle_brand;
-      const model = ov.model ?? firstResult?.vehicle_model;
-      const year = ov.year ?? firstResult?.vehicle_year;
-
-      const match = existingVehicles.find(
-        (v) => v.brand === brand && v.model === model && v.year === year,
-      );
-      let vehicleId: string;
-      if (match) {
-        vehicleId = match.id;
-      } else {
-        const created = await createVehicle({
-          brand,
-          model,
-          year,
-          licensePlate: ov.licensePlate,
-        });
-        existingVehicles.unshift(created);
-        vehicleId = created.id;
-      }
-
-      const cleaned = { ...s, vehicleId };
-      delete (cleaned as Partial<LegacySession>).vehicleOverride;
-      sessions[i] = cleaned as AnalysisSession;
-      changed = true;
-    }
-
-    if (changed) {
-      await AsyncStorage.setItem(KEY, JSON.stringify(sessions));
-    }
-  } catch {
-    // Silent — bad data shouldn't crash the app.
-  }
+  await AsyncStorage.removeItem(key());
 }

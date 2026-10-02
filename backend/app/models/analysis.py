@@ -11,6 +11,7 @@ class Analysis(Base):
     __tablename__ = "analyses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     vehicle_id: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey("vehicles.id", ondelete="SET NULL"), nullable=True, index=True)
     image_filename: Mapped[str] = mapped_column(String, nullable=False)
     damage_score: Mapped[float] = mapped_column(Float, nullable=True)

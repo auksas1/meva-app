@@ -4,8 +4,11 @@ from typing import Optional
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import current_user
 from app.database import get_db
 from app.models.analysis import Analysis
+from app.models.user import User
+from app.models.vehicle import Vehicle
 from app.schemas.analysis import AnalysisListResponse, AnalysisPatch, AnalysisResponse
 from app.services.ai_service import run_inference
 
@@ -55,8 +58,9 @@ def list_analyses(
     limit: int = 20,
     vehicle_id: Optional[int] = None,
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ):
-    q = db.query(Analysis)
+    q = db.query(Analysis).filter(Analysis.user_id == user.id)
     if vehicle_id is not None:
         q = q.filter(Analysis.vehicle_id == vehicle_id)
     total = q.count()
@@ -68,6 +72,7 @@ def list_analyses(
 async def analyze_image(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
+    user: User = Depends(current_user),
 ):
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(status_code=400, detail="File must be an image")
@@ -83,6 +88,7 @@ async def analyze_image(
         raise HTTPException(status_code=503, detail=str(e))
 
     record = Analysis(
+        user_id=user.id,
         image_filename=file.filename or "upload",
         damage_score=inference_result["damage_score"],
         damage_zones=json.dumps([z.model_dump() for z in inference_result["damage_zones"]]),
@@ -98,11 +104,16 @@ async def analyze_image(
 
 
 @router.patch("/{analysis_id}", response_model=AnalysisResponse)
-def patch_analysis(analysis_id: int, body: AnalysisPatch, db: Session = Depends(get_db)):
-    record = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+def patch_analysis(analysis_id: int, body: AnalysisPatch, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = db.query(Analysis).filter(Analysis.id == analysis_id, Analysis.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Analysis not found")
-    for field, value in body.model_dump(exclude_unset=True).items():
+    patch = body.model_dump(exclude_unset=True)
+    if patch.get("vehicle_id") is not None and not db.query(Vehicle).filter(
+        Vehicle.id == patch["vehicle_id"], Vehicle.user_id == user.id
+    ).first():
+        raise HTTPException(status_code=404, detail="Vehicle not found")
+    for field, value in patch.items():
         setattr(record, field, value)
     db.commit()
     db.refresh(record)
@@ -110,8 +121,8 @@ def patch_analysis(analysis_id: int, body: AnalysisPatch, db: Session = Depends(
 
 
 @router.get("/{analysis_id}", response_model=AnalysisResponse)
-def get_analysis(analysis_id: int, db: Session = Depends(get_db)):
-    record = db.query(Analysis).filter(Analysis.id == analysis_id).first()
+def get_analysis(analysis_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = db.query(Analysis).filter(Analysis.id == analysis_id, Analysis.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Analysis not found")
     return _to_response(record)

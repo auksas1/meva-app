@@ -1,7 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
+from app.auth import current_user
 from app.database import get_db
+from app.models.user import User
 from app.models.vehicle import Vehicle
 from app.schemas.vehicle import VehicleCreate, VehicleListResponse, VehiclePatch, VehicleResponse
 
@@ -9,10 +11,11 @@ router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
 
 @router.get("/", response_model=VehicleListResponse)
-def list_vehicles(skip: int = 0, limit: int = 20, db: Session = Depends(get_db)):
-    total = db.query(Vehicle).count()
+def list_vehicles(skip: int = 0, limit: int = 20, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    q = db.query(Vehicle).filter(Vehicle.user_id == user.id)
+    total = q.count()
     records = (
-        db.query(Vehicle)
+        q
         .order_by(Vehicle.created_at.desc(), Vehicle.id.desc())
         .offset(skip)
         .limit(limit)
@@ -22,8 +25,8 @@ def list_vehicles(skip: int = 0, limit: int = 20, db: Session = Depends(get_db))
 
 
 @router.post("/", response_model=VehicleResponse, status_code=201)
-def create_vehicle(body: VehicleCreate, db: Session = Depends(get_db)):
-    record = Vehicle(**body.model_dump())
+def create_vehicle(body: VehicleCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = Vehicle(**body.model_dump(), user_id=user.id)
     db.add(record)
     db.commit()
     db.refresh(record)
@@ -31,16 +34,16 @@ def create_vehicle(body: VehicleCreate, db: Session = Depends(get_db)):
 
 
 @router.get("/{vehicle_id}", response_model=VehicleResponse)
-def get_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
-    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+def get_vehicle(vehicle_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id, Vehicle.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     return record
 
 
 @router.patch("/{vehicle_id}", response_model=VehicleResponse)
-def update_vehicle(vehicle_id: int, body: VehiclePatch, db: Session = Depends(get_db)):
-    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+def update_vehicle(vehicle_id: int, body: VehiclePatch, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id, Vehicle.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     for field, value in body.model_dump(exclude_unset=True).items():
@@ -51,8 +54,8 @@ def update_vehicle(vehicle_id: int, body: VehiclePatch, db: Session = Depends(ge
 
 
 @router.delete("/{vehicle_id}", status_code=204)
-def delete_vehicle(vehicle_id: int, db: Session = Depends(get_db)):
-    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id).first()
+def delete_vehicle(vehicle_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    record = db.query(Vehicle).filter(Vehicle.id == vehicle_id, Vehicle.user_id == user.id).first()
     if not record:
         raise HTTPException(status_code=404, detail="Vehicle not found")
     db.delete(record)

@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, Alert } from 'react-native';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import type { SettingsStackParamList } from '../navigation/types';
 import { DEFAULT_BACKEND_URL, IMAGE_QUALITY_PRESETS, type ImageQuality } from '../constants/config';
 import { healthCheck, fetchDemoSessions, getBaseUrl, type AnalysisResponse } from '../services/api';
 import {
@@ -11,7 +8,7 @@ import {
 } from '../services/storage';
 import { saveSession, clearHistory } from '../services/historyStorage';
 import { createVehicle, getVehicles, clearVehicles } from '../services/vehicleStorage';
-import { getCurrentUser, logout, type AuthUser } from '../services/auth';
+import { logout, useCurrentUser } from '../services/auth';
 import { confirmAction } from '../components/confirmAction';
 import type { AnalyzedPhoto } from '../types/analysis';
 
@@ -131,7 +128,6 @@ function makeFakePhoto(seed: number): AnalyzedPhoto {
 
 export default function SettingsScreen() {
   const { tokens: t, pref, setPref } = useTheme();
-  const navigation = useNavigation<NativeStackNavigationProp<SettingsStackParamList, 'SettingsHome'>>();
 
   const [urlInput, setUrlInput] = useState(DEFAULT_BACKEND_URL);
   const [savedUrl, setSavedUrl] = useState(DEFAULT_BACKEND_URL);
@@ -140,13 +136,7 @@ export default function SettingsScreen() {
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<'ok' | 'failed' | null>(null);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      getCurrentUser().then(setCurrentUser).catch(() => setCurrentUser(null));
-    }, []),
-  );
+  const currentUser = useCurrentUser();
 
   useEffect(() => {
     (async () => {
@@ -195,7 +185,6 @@ export default function SettingsScreen() {
   const handleSignOut = () => {
     confirmAction('Sign out?', 'You can sign back in at any time.', async () => {
       await logout();
-      setCurrentUser(null);
     }, 'Sign out');
   };
 
@@ -291,22 +280,14 @@ export default function SettingsScreen() {
               </View>
               <View style={{ marginLeft: 12, flex: 1 }}>
                 <Text style={{ fontFamily: t.font, fontWeight: t.fw.semibold, fontSize: t.fs.body, color: t.fg1 }}>{currentUser.name ?? 'Signed in'}</Text>
-                <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 2 }}>{currentUser.email}</Text>
+                <Text style={{ fontFamily: t.font, fontSize: t.fs.caption, color: t.fg5, marginTop: 2 }}>{currentUser.email}{currentUser.role === 'admin' ? ' · Admin' : ''}</Text>
               </View>
             </View>
             <View style={{ marginTop: 14 }}>
               <DangerButton onPress={handleSignOut}>Sign out</DangerButton>
             </View>
           </>
-        ) : (
-          <>
-            <Text style={{ fontFamily: t.font, fontSize: t.fs.bodySm, color: t.fg3 }}>You are not signed in.</Text>
-            <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
-              <View style={{ flex: 1 }}><PrimaryButton onPress={() => navigation.navigate('Login')}>Sign in</PrimaryButton></View>
-              <View style={{ flex: 1 }}><SecondaryButton onPress={() => navigation.navigate('Register')}>Register</SecondaryButton></View>
-            </View>
-          </>
-        )}
+        ) : null}
       </Card>
 
       {/* Appearance */}

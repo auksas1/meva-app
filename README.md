@@ -5,17 +5,17 @@ AI-based vehicle damage recognition application for university group project.
 ## Project goal
 The application allows users to upload or capture a vehicle photo, run AI-based damage detection, and view highlighted damage zones and analysis results.
 
-## Planned stack
+## Stack
 - Mobile: React Native + Expo
 - Backend: Python + FastAPI
 - AI: YOLOv8
-- Database: SQLite / PostgreSQL
+- Database: SQLite (`meva-app.db` at repo root, created on first start)
 
 ## Repository structure
 - `mobile/` - mobile client application
 - `backend/` - API and business logic
-- `ai/` - model training and inference related files
-- `docs/` - project documentation
+- `ai/` - model training notes, notebooks and results (no runtime code)
+- `Design System/` - UI reference (live code is in `mobile/src`)
 
 ## Running the project
 
@@ -56,12 +56,17 @@ cd backend
 python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Backend tests
+### Accounts
 
-```bash
-cd backend
-python3 -m pytest -v
-```
+Login is required. Seed accounts live in `backend/seed_users.json` and are inserted on first start (empty `users` table):
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@meva.lt` | `admin123` | admin |
+| `demo@meva.lt` | `demo123` | user (owns `seed_demo.py` data) |
+| `user@meva.lt` | `user123` | user |
+
+In dev builds the Login screen has a **Dev** menu (top right) for one-tap login; it reads `GET /auth/dev-accounts`, which is on by default; set `DEV_MODE=false` in `backend/.env` anywhere public (it hands out seed passwords). Vehicles and analyses are scoped to the signed-in user. Schema changed — delete `meva-app.db` if you have an old one.
 
 ### Network targets
 
