@@ -56,13 +56,6 @@ cd backend
 python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-### Backend tests
-
-```bash
-cd backend
-python3 -m pytest -v
-```
-
 ### Network targets
 
 | Client | Backend URL to set in Settings |
