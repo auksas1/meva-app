@@ -56,6 +56,18 @@ cd backend
 python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
+### Accounts
+
+Login is required. Seed accounts live in `backend/seed_users.json` and are inserted on first start (empty `users` table):
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@meva.lt` | `admin123` | admin |
+| `demo@meva.lt` | `demo123` | user (owns `seed_demo.py` data) |
+| `user@meva.lt` | `user123` | user |
+
+In dev builds the Login screen has a **Dev** menu (top right) for one-tap login; it reads `GET /auth/dev-accounts`, which is on by default; set `DEV_MODE=false` in `backend/.env` anywhere public (it hands out seed passwords). Vehicles and analyses are scoped to the signed-in user. Schema changed — delete `meva-app.db` if you have an old one.
+
 ### Network targets
 
 | Client | Backend URL to set in Settings |

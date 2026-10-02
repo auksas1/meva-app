@@ -1,21 +1,22 @@
 import React, { useEffect } from 'react';
 import { NavigationContainer, DefaultTheme, type Theme } from '@react-navigation/native';
 import MainTabs from './MainTabs';
+import AuthStack from './AuthStack';
 import { SelectedPhotosProvider } from '../state/selectedPhotos';
 import { hydrateSettings } from '../services/storage';
-import { migrateLegacySessions } from '../services/historyStorage';
+import { restoreSession, useCurrentUser } from '../services/auth';
 import { useTheme } from '../theme';
 
 export default function AppNavigator() {
   const { tokens, isDark } = useTheme();
+  const user = useCurrentUser();
 
   useEffect(() => {
-    hydrateSettings().catch(() => {
-      // Fall back to default URL silently if AsyncStorage read fails.
-    });
-    migrateLegacySessions().catch(() => {
-      // Migration failure shouldn't crash the app.
-    });
+    hydrateSettings()
+      .catch(() => {
+        // Fall back to default URL silently if AsyncStorage read fails.
+      })
+      .then(restoreSession);
   }, []);
 
   const navTheme: Theme = {
@@ -32,10 +33,13 @@ export default function AppNavigator() {
     },
   };
 
+  // Still restoring the saved session — avoid flashing the Login screen.
+  if (user === undefined) return null;
+
   return (
-    <SelectedPhotosProvider>
+    <SelectedPhotosProvider key={user?.id}>
       <NavigationContainer theme={navTheme}>
-        <MainTabs />
+        {user ? <MainTabs /> : <AuthStack />}
       </NavigationContainer>
     </SelectedPhotosProvider>
   );

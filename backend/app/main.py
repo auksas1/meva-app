@@ -1,13 +1,17 @@
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.database import Base, engine
-from app.routers import analysis, demo, health, prices, vehicles
+from app.auth import current_user, seed_users
+from app.database import Base, SessionLocal, engine
+from app.models import user  # noqa: F401  (register users/sessions tables)
+from app.routers import analysis, auth, demo, health, prices, vehicles
 
 Base.metadata.create_all(bind=engine)
+with SessionLocal() as _db:
+    seed_users(_db)
 
 app = FastAPI(title="MEVA API", version="0.1.0")
 
@@ -19,9 +23,10 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(auth.router)
 app.include_router(analysis.router)
 app.include_router(vehicles.router)
-app.include_router(prices.router)
+app.include_router(prices.router, dependencies=[Depends(current_user)])
 app.include_router(demo.router)
 
 # Serve demo photos so mobile can display them as image thumbnails.

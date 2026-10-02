@@ -1,0 +1,5 @@
+[
+  { "email": "admin@meva.lt", "password": "admin123", "name": "Admin", "role": "admin" },
+  { "email": "demo@meva.lt", "password": "demo123", "name": "Demo User", "role": "user" },
+  { "email": "user@meva.lt", "password": "user123", "name": "Test User", "role": "user" }
+]

@@ -79,14 +79,34 @@ export function getBaseUrl(): string {
   return baseUrlOverride ?? DEFAULT_BACKEND_URL;
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
+// Bearer token + "session is dead" callback, both owned by services/auth.ts.
+let authToken: string | null = null;
+let onUnauthorized: (() => void) | null = null;
+
+export function setAuthToken(token: string | null): void {
+  authToken = token;
+}
+
+export function setOnUnauthorized(cb: (() => void) | null): void {
+  onUnauthorized = cb;
+}
+
+export async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   try {
+    const headers = new Headers(init.headers);
+    if (authToken) headers.set('Authorization', `Bearer ${authToken}`);
     const res = await fetch(`${getBaseUrl()}${path}`, {
       ...init,
+      headers,
       signal: controller.signal,
     });
+    // 401 = token gone, 403 = account blocked → drop back to Login.
+    // Skipped for /auth/* so a wrong password just shows an error.
+    if ((res.status === 401 || res.status === 403) && authToken && !path.startsWith('/auth/')) {
+      onUnauthorized?.();
+    }
     if (!res.ok) {
       let detail: unknown;
       try {

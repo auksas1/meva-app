@@ -9,8 +9,10 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from app.auth import current_user
 from app.database import get_db
 from app.models.analysis import Analysis
+from app.models.user import User
 from app.models.vehicle import Vehicle
 
 router = APIRouter(prefix="/demo", tags=["demo"])
@@ -65,8 +67,8 @@ class DemoSessionsResponse(BaseModel):
 
 
 @router.get("/sessions", response_model=DemoSessionsResponse)
-def get_demo_sessions(db: Session = Depends(get_db)) -> DemoSessionsResponse:
-    vehicles = db.query(Vehicle).order_by(Vehicle.id).all()
+def get_demo_sessions(db: Session = Depends(get_db), user: User = Depends(current_user)) -> DemoSessionsResponse:
+    vehicles = db.query(Vehicle).filter(Vehicle.user_id == user.id).order_by(Vehicle.id).all()
     sessions: list[DemoSession] = []
     for vehicle in vehicles:
         analyses = (
