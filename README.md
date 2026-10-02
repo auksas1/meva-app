@@ -5,17 +5,80 @@ AI-based vehicle damage recognition application for university group project.
 ## Project goal
 The application allows users to upload or capture a vehicle photo, run AI-based damage detection, and view highlighted damage zones and analysis results.
 
-## Planned stack
+## Stack
 - Mobile: React Native + Expo
 - Backend: Python + FastAPI
 - AI: YOLOv8
-- Database: SQLite / PostgreSQL
+- Database: SQLite (`meva-app.db` at repo root, created on first start)
 
 ## Repository structure
 - `mobile/` - mobile client application
 - `backend/` - API and business logic
-- `ai/` - model training and inference related files
-- `docs/` - project documentation
+- `ai/` - model training notes, notebooks and results (no runtime code)
+- `Design System/` - UI reference (live code is in `mobile/src`)
+
+## Running the project
+
+### Prerequisites
+- Python 3.9+
+- Node 20 LTS
+- Expo Go on your phone (optional, for device testing)
+
+### Start everything
+
+```bash
+bash start.sh
+```
+
+This will free port 8000 if needed, start the backend, then launch Expo Metro. From the Metro prompt:
+- `w` → open in browser at http://localhost:8081
+- `i` → iOS simulator (macOS only)
+- `a` → Android emulator
+- Scan QR with Expo Go for a physical device
+
+### First-time setup
+
+```bash
+# Backend dependencies (start.sh picks up backend/.venv automatically)
+cd backend
+python3 -m venv .venv          # Debian/Ubuntu: apt install python3-venv first
+.venv/bin/pip install -r requirements.txt
+```
+
+**Model weights** are not in git (`*.pt` is ignored). Get `best_vehicle_damage_yolov8s_30e.pt` from the team and put it at `backend/ai/best_vehicle_damage_yolov8s_30e.pt`. Without it the app runs, but `POST /analysis/analyze` returns 503 and `seed_demo.py` can't run.
+
+`backend/.env` is created from `.env.example` and mobile dependencies are installed (`npm install`) automatically by `start.sh`.
+
+### Backend only
+
+```bash
+cd backend
+python3 -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+### Accounts
+
+Login is required. Seed accounts live in `backend/seed_users.json` and are inserted on first start (empty `users` table):
+
+| Email | Password | Role |
+|---|---|---|
+| `admin@meva.lt` | `admin123` | admin |
+| `demo@meva.lt` | `demo123` | user (owns `seed_demo.py` data) |
+| `user@meva.lt` | `user123` | user |
+
+In dev builds the Login screen has a **Dev** menu (top right) for one-tap login; it reads `GET /auth/dev-accounts`, which is on by default; set `DEV_MODE=false` in `backend/.env` anywhere public (it hands out seed passwords). Vehicles and analyses are scoped to the signed-in user. Schema changed — delete `meva-app.db` if you have an old one.
+
+### Network targets
+
+| Client | Backend URL to set in Settings |
+|---|---|
+| Browser / iOS simulator | `http://localhost:8000` |
+| Android emulator | `http://10.0.2.2:8000` |
+| Physical phone (Expo Go) | `http://<your LAN IP>:8000` |
+
+Set the backend URL in the app's **Settings tab**.
+
+---
 
 ## Branch strategy
 - `main` - stable version

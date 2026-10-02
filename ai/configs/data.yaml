@@ -1,0 +1,6 @@
+train: /content/Vehicle-Damage-Detection-1/train/images
+val: /content/Vehicle-Damage-Detection-1/valid/images
+test: /content/Vehicle-Damage-Detection-1/test/images
+
+nc: 7
+names: ['Broken Part', 'Crack', 'Dent', 'Paint Damage', 'Rust_Corrision', 'Scratch', 'Tire Damage']

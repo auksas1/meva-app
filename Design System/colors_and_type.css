@@ -1,0 +1,212 @@
+/* ============================================================
+   AutoDamage by MEVA — Design Tokens (Proposed redesign)
+   Dark-first, premium automotive-diagnostic aesthetic.
+   ============================================================ */
+
+:root {
+  /* -------- Brand / Action -------- */
+  --ad-cobalt-700: #1d4ed8;
+  --ad-cobalt-600: #2562ee;   /* PRIMARY — deep electric blue */
+  --ad-cobalt-500: #3b7bff;   /* Primary on dark surfaces */
+  --ad-cobalt-400: #5b94ff;
+  --ad-cobalt-50:  #eef3ff;   /* Subtle light surface */
+  --ad-cobalt-950: #0f1a35;   /* Subtle dark surface */
+
+  /* -------- Severity (used sparingly, never as fills on whole cards) -------- */
+  --ad-severe:  #ef4444;
+  --ad-severe-soft: #3b1d1d;
+  --ad-warning: #f59e0b;
+  --ad-warning-soft: #3a2a13;
+  --ad-success: #22c55e;
+  --ad-success-soft: #163325;
+
+  /* ============================================================
+     LIGHT THEME
+     ============================================================ */
+  --ad-bg:        #f7f8fb;       /* Page background */
+  --ad-surface-1: #ffffff;       /* Cards / panels */
+  --ad-surface-2: #f1f3f8;       /* Inset / muted card */
+  --ad-surface-3: #e8ecf3;       /* Image placeholder */
+  --ad-hairline:  #e6e9f0;
+  --ad-border:    #d9dde6;
+
+  --ad-fg-1: #0b1220;            /* Primary text */
+  --ad-fg-2: #1c2434;            /* Heading-emphasis */
+  --ad-fg-3: #404a5e;            /* Body */
+  --ad-fg-4: #5d6577;            /* Secondary */
+  --ad-fg-5: #8c93a5;            /* Muted / labels */
+  --ad-fg-6: #b3b9c8;            /* Disabled */
+
+  --ad-primary: var(--ad-cobalt-600);
+  --ad-primary-fg: #ffffff;
+  --ad-on-primary-subtle: var(--ad-cobalt-50);
+  --ad-on-primary-subtle-fg: var(--ad-cobalt-700);
+
+  /* -------- Elevation (light) -------- */
+  --ad-shadow-1: 0 1px 2px rgba(15,22,40,0.04), 0 1px 3px rgba(15,22,40,0.04);
+  --ad-shadow-2: 0 4px 12px rgba(15,22,40,0.06), 0 1px 3px rgba(15,22,40,0.04);
+  --ad-shadow-pop: 0 12px 32px rgba(15,22,40,0.12), 0 2px 6px rgba(15,22,40,0.05);
+  --ad-ring-focus: 0 0 0 3px rgba(37,98,238,0.35);
+}
+
+[data-theme="dark"] {
+  --ad-bg:        #0a0e16;       /* Near-black with navy hint */
+  --ad-surface-1: #121823;       /* Cards */
+  --ad-surface-2: #1a2230;       /* Inset / muted */
+  --ad-surface-3: #232b3b;       /* Image placeholder */
+  --ad-hairline:  #232b3a;
+  --ad-border:    #2c3447;
+
+  --ad-fg-1: #f1f4fa;
+  --ad-fg-2: #dbe0eb;
+  --ad-fg-3: #b8becc;
+  --ad-fg-4: #8a91a4;
+  --ad-fg-5: #6a7184;
+  --ad-fg-6: #424a5d;
+
+  --ad-primary: var(--ad-cobalt-500);
+  --ad-primary-fg: #ffffff;
+  --ad-on-primary-subtle: var(--ad-cobalt-950);
+  --ad-on-primary-subtle-fg: var(--ad-cobalt-400);
+
+  --ad-shadow-1: 0 1px 2px rgba(0,0,0,0.35);
+  --ad-shadow-2: 0 6px 18px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.25);
+  --ad-shadow-pop: 0 16px 40px rgba(0,0,0,0.55), 0 4px 12px rgba(0,0,0,0.35);
+  --ad-ring-focus: 0 0 0 3px rgba(59,123,255,0.4);
+}
+
+/* ============================================================
+   Typography
+   ============================================================ */
+:root {
+  --ad-font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+             "Helvetica Neue", Arial, sans-serif;
+  --ad-font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* Hierarchy from spec */
+  --ad-fs-display: 28px;     /* Hero / KPI numbers */
+  --ad-fs-h1: 24px;          /* Screen title */
+  --ad-fs-h2: 18px;          /* Section title */
+  --ad-fs-h3: 16px;          /* Card title */
+  --ad-fs-body: 15px;        /* Body */
+  --ad-fs-body-sm: 14px;
+  --ad-fs-meta: 13px;        /* Meta */
+  --ad-fs-caption: 12px;     /* Caption */
+  --ad-fs-overline: 11px;    /* Uppercase labels */
+
+  --ad-fw-regular: 400;
+  --ad-fw-medium: 500;
+  --ad-fw-semibold: 600;
+  --ad-fw-bold: 700;
+  --ad-fw-black: 800;
+
+  --ad-tracking-tight: -0.015em;
+  --ad-tracking-normal: 0;
+  --ad-tracking-wide: 0.04em;
+  --ad-tracking-overline: 0.08em;
+
+  --ad-lh-tight: 1.15;
+  --ad-lh-snug: 1.3;
+  --ad-lh-body: 1.5;
+
+  /* -------- Spacing scale -------- */
+  --ad-s-1: 4px;
+  --ad-s-2: 8px;
+  --ad-s-3: 12px;
+  --ad-s-4: 16px;
+  --ad-s-5: 20px;
+  --ad-s-6: 24px;
+  --ad-s-7: 32px;
+  --ad-s-8: 40px;
+  --ad-s-9: 56px;
+  --ad-screen-pad: 20px;
+
+  /* -------- Radii -------- */
+  --ad-r-sm: 8px;            /* Chips */
+  --ad-r-md: 12px;           /* Inputs, small buttons */
+  --ad-r-lg: 16px;           /* Cards */
+  --ad-r-xl: 20px;           /* Hero card / scan tile */
+  --ad-r-pill: 999px;
+
+  /* -------- Hit targets -------- */
+  --ad-touch: 48px;
+}
+
+/* ============================================================
+   Semantic helpers — use as classes on plain HTML
+   ============================================================ */
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: var(--ad-font);
+  color: var(--ad-fg-1);
+  background: var(--ad-bg);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.ad-screen-title {
+  font: var(--ad-fw-bold) var(--ad-fs-h1)/var(--ad-lh-tight) var(--ad-font);
+  letter-spacing: var(--ad-tracking-tight);
+  color: var(--ad-fg-1);
+  margin: 0;
+}
+.ad-section-title {
+  font: var(--ad-fw-semibold) var(--ad-fs-h2)/var(--ad-lh-snug) var(--ad-font);
+  color: var(--ad-fg-1);
+  margin: 0;
+}
+.ad-card-title {
+  font: var(--ad-fw-semibold) var(--ad-fs-h3)/var(--ad-lh-snug) var(--ad-font);
+  color: var(--ad-fg-1);
+}
+.ad-body {
+  font: var(--ad-fw-regular) var(--ad-fs-body)/var(--ad-lh-body) var(--ad-font);
+  color: var(--ad-fg-3);
+}
+.ad-meta {
+  font: var(--ad-fw-regular) var(--ad-fs-meta)/var(--ad-lh-body) var(--ad-font);
+  color: var(--ad-fg-4);
+}
+.ad-overline {
+  font: var(--ad-fw-semibold) var(--ad-fs-overline)/1 var(--ad-font);
+  text-transform: uppercase;
+  letter-spacing: var(--ad-tracking-overline);
+  color: var(--ad-fg-5);
+}
+.ad-mono {
+  font-family: var(--ad-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   Legacy MEVA tokens — kept for any preview cards still using them.
+   New work should use --ad-* tokens above.
+   ============================================================ */
+:root {
+  --meva-blue-600: #2562ee;
+  --meva-blue-500: #3b7bff;
+  --meva-blue-50:  #eef3ff;
+  --meva-green-600: #22c55e;
+  --meva-green-500: #22c55e;
+  --meva-orange-500: #f59e0b;
+  --meva-red-600: #ef4444;
+  --meva-red-50: #3b1d1d;
+  --meva-fg-1: #0b1220;
+  --meva-fg-2: #1c2434;
+  --meva-fg-3: #404a5e;
+  --meva-fg-4: #5d6577;
+  --meva-fg-5: #8c93a5;
+  --meva-fg-6: #b3b9c8;
+  --meva-fg-7: #8c93a5;
+  --meva-fg-8: #b3b9c8;
+  --meva-fg-9: #b3b9c8;
+  --meva-bg-app: #f7f8fb;
+  --meva-surface-1: #ffffff;
+  --meva-surface-2: #f1f3f8;
+  --meva-surface-3: #e8ecf3;
+  --meva-border-1: #d9dde6;
+  --meva-border-3: #e6e9f0;
+  --meva-font-family: var(--ad-font);
+}
