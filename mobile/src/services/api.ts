@@ -13,9 +13,6 @@ export type Detection = {
   bbox: [number, number, number, number];
 };
 
-// Legacy alias — older backend responses used `damage_zones`. Kept for back-compat.
-export type DamageZone = Detection;
-
 export type AnalysisSummary = {
   detections_count?: number;
   primary_damage?: string;
@@ -52,7 +49,7 @@ export type AnalysisResponse = {
   total_estimated_cost?: number;
 
   // Legacy / back-compat (tolerated, read only via helpers; never shown as severity)
-  damage_zones?: DamageZone[];
+  damage_zones?: Detection[];
   vehicle_brand?: string;
   vehicle_model?: string;
   vehicle_year?: number;
@@ -152,23 +149,12 @@ export async function uploadImage(uri: string): Promise<AnalysisResponse> {
   });
 }
 
-export async function getAnalysis(id: number): Promise<AnalysisResponse> {
-  return request<AnalysisResponse>(`/analysis/${id}`);
-}
-
 export async function patchAnalysis(id: number, data: { vehicle_id?: number | null }): Promise<AnalysisResponse> {
   return request<AnalysisResponse>(`/analysis/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
   });
-}
-
-export async function listAnalysesForVehicle(vehicleId: number): Promise<AnalysisResponse[]> {
-  const res = await request<{ items: AnalysisResponse[]; total: number }>(
-    `/analysis/?vehicle_id=${vehicleId}&limit=200`,
-  );
-  return res.items;
 }
 
 // --- Vehicles ---

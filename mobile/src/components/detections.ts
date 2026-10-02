@@ -31,15 +31,6 @@ export function detectionCount(r: AnalysisResponse): number {
   return r.summary?.detections_count ?? getDetections(r).length;
 }
 
-/** Primary damage type (prettified), or the highest-confidence detection. */
-export function primaryDamage(r: AnalysisResponse): string | null {
-  if (r.summary?.primary_damage) return prettifyLabel(r.summary.primary_damage);
-  const dets = getDetections(r);
-  if (dets.length === 0) return null;
-  const top = dets.reduce((best, d) => (d.confidence > best.confidence ? d : best), dets[0]);
-  return prettifyLabel(top.label);
-}
-
 export function getRecommendation(r: AnalysisResponse): string | null {
   return r.recommendation?.message ?? null;
 }
