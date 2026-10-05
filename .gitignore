@@ -1,29 +1,39 @@
-# Python
-__pycache__/
-*.py[cod]
-.venv/
-venv/
-.ipynb_checkpoints/
-
-# Node / Expo
+# dependencies
 node_modules/
+
+# Expo
 .expo/
-.web-build/
 dist/
+web-build/
+expo-env.d.ts
 
-# Env / local
-.env
-.env.local
-CLAUDE.md
-*.log
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
 
-# Data / model weights
-*.db
-*.pt
-*.pth
-*.pdf
+# Metro
+.metro-health-check*
 
-# Editors / OS
-.vscode/
-.idea/
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
 .DS_Store
+*.pem
+
+# local env files
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
