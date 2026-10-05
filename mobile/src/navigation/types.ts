@@ -33,6 +33,11 @@ export type SettingsStackParamList = {
   SettingsHome: undefined;
 };
 
+export type AdminStackParamList = {
+  AdminUsers: undefined;
+  AdminUserDetail: { userId: number };
+};
+
 export type AuthStackParamList = {
   Login: undefined;
   Register: undefined;
@@ -42,4 +47,5 @@ export type MainTabParamList = {
   Analyze: NavigatorScreenParams<AnalyzeStackParamList>;
   History: NavigatorScreenParams<HistoryStackParamList>;
   Settings: NavigatorScreenParams<SettingsStackParamList>;
+  Admin: NavigatorScreenParams<AdminStackParamList>;
 };
