@@ -7,7 +7,8 @@ from fastapi.staticfiles import StaticFiles
 from app.auth import current_user, seed_users
 from app.database import Base, SessionLocal, engine
 from app.models import user  # noqa: F401  (register users/sessions tables)
-from app.routers import analysis, auth, demo, health, prices, vehicles
+from app.models import admin_audit  # noqa: F401  (register admin audit table)
+from app.routers import admin, analysis, auth, demo, health, prices, vehicles
 
 Base.metadata.create_all(bind=engine)
 with SessionLocal() as _db:
@@ -23,6 +24,7 @@ app.add_middleware(
 )
 
 app.include_router(health.router)
+app.include_router(admin.router)
 app.include_router(auth.router)
 app.include_router(analysis.router)
 app.include_router(vehicles.router)
