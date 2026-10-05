@@ -5,8 +5,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AnalyzeStack from './AnalyzeStack';
 import HistoryStack from './HistoryStack';
 import SettingsStack from './SettingsStack';
+import AdminStack from './AdminStack';
 import type { MainTabParamList } from './types';
 import { useTheme } from '../theme';
+import { useCurrentUser } from '../services/auth';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -15,11 +17,13 @@ const ICONS: Record<keyof MainTabParamList, [React.ComponentProps<typeof Ionicon
   Analyze: ['scan-outline', 'scan'],
   History: ['time-outline', 'time'],
   Settings: ['settings-outline', 'settings'],
+  Admin: ['people-outline', 'people'],
 };
 
 export default function MainTabs() {
   const { tokens: t, isDark } = useTheme();
   const insets = useSafeAreaInsets();
+  const currentUser = useCurrentUser();
 
   return (
     <Tab.Navigator
@@ -55,6 +59,7 @@ export default function MainTabs() {
     >
       <Tab.Screen name="Analyze" component={AnalyzeStack} />
       <Tab.Screen name="History" component={HistoryStack} />
+      {currentUser?.role === 'admin' ? <Tab.Screen name="Admin" component={AdminStack} /> : null}
       <Tab.Screen name="Settings" component={SettingsStack} />
     </Tab.Navigator>
   );
