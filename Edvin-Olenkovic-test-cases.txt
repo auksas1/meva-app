@@ -1,0 +1,131 @@
+MEVA E2E TESTINIAI ATVEJAI
+==========================
+Šaka: feature/e2e-Edvino   Failai: e2e/test_kan1.py, e2e/test_kan4.py
+Iš viso: 61 testinis atvejis (KAN-1: 31, KAN-4: 30)
+XFAIL – laukiama, kad nepraeis: web versijoje Alert.alert neparodo klaidos pranešimo.
+
+
+KAN-1  Žalos tipo klasifikavimas AI modeliu
+-------------------------------------------
+
+TC-KAN-1-SETUP  Prisijungimas ir žalos atvejo sukūrimas
+  test_tc_kan1_setup
+    - prisijungimas per UI, nuotrauka išsaugoma naujam automobiliui (nr. TESTVIN0000000001)
+
+TC-KAN-1-01  EP  Kiekvienos žalos klasės pateikimas
+  test_tc_kan1_01_each_class_labelled
+    [Scratch]          įbrėžimas – etiketė „Scratch 92%“
+    [Dent]             įlenkimas – etiketė „Dent 92%“
+    [Crack]            įskilimas – etiketė „Crack 92%“
+    [Paint Damage]     dažų pažeidimas – etiketė „Paint damage 92%“
+    [Broken Part]      sulaužyta dalis – etiketė „Broken part 92%“
+    [Rust_Corrision]   rūdys / korozija – etiketė „Rust / corrosion 92%“
+    [Tire Damage]      padangos pažeidimas – etiketė „Tire damage 92%“
+  test_tc_kan1_01_mixed_types_each_zone_own_label
+    - 3 skirtingų tipų zonos, kiekviena su savo etikete
+
+TC-KAN-1-02  BVA  Patikimumo riba 60 %
+  test_tc_kan1_02_below_model_cutoff_is_not_a_detection
+    - 34 % (< 35 %): zona atmetama, rodoma „No visible damage“
+  test_tc_kan1_02_confidence_boundaries
+    [0.35]    35 %   – „Low confidence“ + perspėjimas įkelti aiškesnę nuotrauką
+    [0.599]   59,9 % – „Low confidence“ + perspėjimas (ties riba iš apačios)
+    [0.6]     60 %   – „Medium confidence“, be perspėjimo (ant ribos)
+    [0.601]   60,1 % – „Medium confidence“ (ties riba iš viršaus)
+    [0.8]     80 %   – „High confidence“
+    [1.0]     100 %  – „High confidence“, rodoma „100%“
+
+TC-KAN-1-03  EP  Tipas ir patikimumas prie zonos
+  test_tc_kan1_03_type_and_confidence_at_zone
+    [1280]   įprastas ekranas – etiketės prie savo rėmelių
+    [360]    mobilus ekranas – etiketės neišeina už ekrano
+
+TC-KAN-1-04  DT  Preliminari kaina pagal klasifikavimą
+  test_tc_kan1_04_r1_price_depends_on_type
+    - įbrėžimo ir įlenkimo kainos skiriasi
+  test_tc_kan1_04_r1_multi_zone_total_is_sum
+    - 3 zonos: bendra kaina lygi dalių kainų sumai
+  test_tc_kan1_04_r4_no_damage_no_price
+    - žalos nėra: kaina nerodoma (ne €0)
+
+TC-KAN-1-05  EP  Netinkamos nuotraukos
+  test_tc_kan1_05_unsuitable_photo_rejected_before_ai
+    [small.jpg]       320×240 – AI nekviečiamas, nuotrauka lieka pasirinkta
+    [not_image.jpg]   tekstinis failas su .jpg – AI nekviečiamas
+    [empty.jpg]       0 baitų – AI nekviečiamas
+    [huge.jpg]        > 10 MB – AI nekviečiamas
+  test_tc_kan1_05_rejection_reason_shown                                  (XFAIL)
+    [small.jpg]       matoma „Image too small“
+    [not_image.jpg]   matoma „Could not read image“
+    [empty.jpg]       matoma „Could not read image“
+    [huge.jpg]        matoma „Image too large“
+
+TC-KAN-1-06  EP  AI serviso gedimas
+  test_tc_kan1_06_ai_error_keeps_photo_and_retry_succeeds
+    - klaida 503: nuotrauka neprarasta, pakartojus analizė pavyksta
+  test_tc_kan1_06_ai_error_message_shown                                  (XFAIL)
+    - klaida 503: matomas „Upload failed“
+
+
+KAN-4  Paryškintos žalos zonos nuotraukoje
+------------------------------------------
+
+TC-KAN-4-SETUP  Prisijungimas ir įkėlimo langas
+  test_tc_kan4_setup
+    - prisijungimas per UI, tuščias įkėlimo langas, analizės mygtukas neaktyvus
+
+TC-KAN-4-01  EP  Zonos pažymėtos ant originalios nuotraukos
+  test_tc_kan4_01_each_zone_framed_on_original_photo
+    [one]       1 zona – 1 rėmelis
+    [three]     3 zonos – 3 atskiri rėmeliai
+    [overlap]   2 persidengiančios zonos – 2 atskiri rėmeliai
+
+TC-KAN-4-02  BVA  Zonų kiekio riba (10)
+  test_tc_kan4_02_zone_count_boundaries
+    [0]    rėmelių nėra, rodoma „No visible damage“
+    [1]    1 rėmelis ir 1 etiketė
+    [9]    9 rėmeliai (ties riba iš apačios)
+    [10]   10 rėmelių (ant ribos)
+    [11]   11 rėmelių – programa ribos neturi (virš ribos)
+
+TC-KAN-4-03  EP  Žalos tipas prie kiekvieno rėmelio
+  test_tc_kan4_03_type_label_at_each_frame
+    [1280]   tipas matomas be paspaudimo, įprastas ekranas
+    [360]    tas pats mobiliame ekrane
+  test_tc_kan4_03_overlapping_labels_readable
+    - persidengiančių zonų etiketės viena kitos neuždengia
+
+TC-KAN-4-04  EP  Preliminari kaina ir bendra suma
+  test_tc_kan4_04_single_zone_price_equals_total
+    - 1 zona: dalies kaina lygi bendrai kainai
+  test_tc_kan4_04_total_is_sum_of_parts
+    - 3 zonos: bendra kaina lygi dalių kainų sumai
+  test_tc_kan4_04_other_type_is_priced
+    - „kita“ tipas (rūdys) taip pat įkainojamas
+
+TC-KAN-4-05  DT  Žalos neaptikimas ir analizės klaidos
+  test_tc_kan4_05_r1_damage_shows_frames_and_price
+    - R1 žala yra: rodomi rėmeliai ir kaina
+  test_tc_kan4_05_r2_no_damage_shows_message_and_no_price
+    - R2 žalos nėra: „No visible damage“, be rėmelių ir be kainos
+  test_tc_kan4_05_r3_invalid_photo_not_analyzed
+    [small.jpg]       R3 per maža raiška – AI nekviečiamas
+    [not_image.jpg]   R3 ne nuotrauka – AI nekviečiamas
+    [empty.jpg]       R3 tuščias failas – AI nekviečiamas
+  test_tc_kan4_05_r4_system_error_then_retry
+    - R4 sistemos klaida: nieko neišsaugoma, pakartotinis įkėlimas pavyksta
+  test_tc_kan4_05_error_message_shown                                     (XFAIL)
+    [small.jpg]       klaidos pranešimas per 5 s
+    [not_image.jpg]   klaidos pranešimas
+    [empty.jpg]       klaidos pranešimas
+    [server_error]    serverio klaida 503 – klaidos pranešimas
+
+TC-KAN-4-06  BVA  Atvaizdavimo trukmė (5 s)
+  test_tc_kan4_06_analysis_within_5s
+    [1]    1 zona – analizė per ≤ 5 s
+    [10]   10 zonų – analizė per ≤ 5 s
+  test_tc_kan4_06_slow_response_still_rendered
+    [4.9]  atsakymas po 4,9 s – rezultatas parodomas
+    [5.1]  atsakymas po 5,1 s – 5 s ribos nėra, rezultatas vis tiek parodomas
+  test_tc_kan4_06_repeated_three_times
+    - 3 matavimai iš eilės, visi ≤ 5 s
