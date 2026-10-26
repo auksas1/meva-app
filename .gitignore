@@ -27,3 +27,8 @@ CLAUDE.md
 .vscode/
 .idea/
 .DS_Store
+
+# Test / quality artifacts
+.coverage
+coverage.xml
+mutants/
