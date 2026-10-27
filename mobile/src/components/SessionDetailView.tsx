@@ -33,7 +33,7 @@ function totalDamages(session: AnalysisSession): number {
 }
 
 /** Highest-confidence damage type across all photos in the session. */
-function sessionPrimaryDamage(session: AnalysisSession): string | null {
+export function sessionPrimaryDamage(session: AnalysisSession): string | null {
   let topLabel: string | null = null;
   let topConf = -1;
   for (const p of session.photos) {

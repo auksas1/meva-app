@@ -27,3 +27,12 @@ CLAUDE.md
 .vscode/
 .idea/
 .DS_Store
+
+# Lab 2 quality tooling artifacts (coverage, mutation reports, scanner work dirs)
+mobile/coverage/
+mobile/reports/
+mobile/.stryker-tmp/
+.scannerwork/
+.coverage
+# Lab 2 local scratch folder (5b refactoring examples, not part of the deliverable)
+mobile/refactor/
