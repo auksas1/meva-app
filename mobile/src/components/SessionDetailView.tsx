@@ -14,6 +14,7 @@ import LinkButton from './LinkButton';
 import DangerButton from './DangerButton';
 import { getDetections, detectionCount, prettifyLabel, requiresReview } from './detections';
 import { searchPriceLinks } from '../services/api';
+import { dedupedPartCosts, totalActualSpent } from '../utils/sessionCostMetrics';
 
 type Props = {
   session: AnalysisSession;
@@ -48,17 +49,7 @@ function sessionNeedsReview(session: AnalysisSession): boolean {
   return session.photos.some((p) => requiresReview(p.result));
 }
 
-export function dedupedPartCosts(session: AnalysisSession): Map<string, number> {
-  const seen = new Map<string, number>();
-  for (const p of session.photos) {
-    for (const part of p.result.affected_parts ?? []) {
-      if (typeof part.estimated_cost !== 'number') continue;
-      const prev = seen.get(part.name) ?? 0;
-      if (part.estimated_cost > prev) seen.set(part.name, part.estimated_cost);
-    }
-  }
-  return seen;
-}
+
 
 function totalEstimate(session: AnalysisSession): number | null {
   const parts = dedupedPartCosts(session);
@@ -66,12 +57,7 @@ function totalEstimate(session: AnalysisSession): number | null {
   return Array.from(parts.values()).reduce((a, b) => a + b, 0);
 }
 
-function totalActualSpent(session: AnalysisSession): number | null {
-  const repairs = session.repairs ?? [];
-  let total = 0; let any = false;
-  for (const r of repairs) if (typeof r.actualCost === 'number') { total += r.actualCost; any = true; }
-  return any ? total : null;
-}
+
 
 function formatDate(iso: string): string {
   try { return new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); }
