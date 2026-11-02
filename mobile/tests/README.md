@@ -16,7 +16,9 @@ npm install --no-save jest@29.7.0 jest-expo@54.0.18 @types/jest@29.5.14 eslint@9
 | typhonjs-escomplex | 6a – prižiūrimumo indeksas (TypeScript) |
 | cloc | 3 – eilučių skaičiavimas |
 
-Python įrankiai (radon, lizard) – `backend/requirements-dev.txt`.
+Python įrankiai (radon, lizard, pytest) – `backend/requirements-dev.txt`. madge (6b) paleidžiamas per `npx`, diegti nereikia.
+
+6b ir 6c kodas: `scripts/quality/coupling.js` (mobile), `backend/scripts/quality/coupling.py`, `backend/tests/integration/`.
 
 ## Failai
 
@@ -41,4 +43,8 @@ Python įrankiai (radon, lizard) – `backend/requirements-dev.txt`.
 | 8.1b kiekvieno testo rezultatas | `$env:TEST_SET="llm"; npx jest --json --outputFile=reports/jest/llm.json`, po to `node scripts/quality/test-results.js llm` |
 | 8.2b DKM testams | `$env:TEST_SKIP_NAME="returns null when status is undefined"` (Stryker reikalauja, kad visi testai praeitų), tada mutacijų komanda su `llm` |
 | 6a MI | `node scripts/quality/maintainability.js` |
+| 6b sujungimas (mobile) | `npx --yes madge@8.0.0 --extensions ts,tsx --ts-config tsconfig.json --json src > reports\madge.json`, po to `node scripts/quality/coupling.js reports\madge.json` |
+| 6b ciklai | `npx --yes madge@8.0.0 --extensions ts,tsx --ts-config tsconfig.json --circular src` |
+| 6b sujungimas (backend, iš `backend/`) | `.venv\Scripts\python.exe scripts/quality/coupling.py app` |
+| 6c integracinis testas (iš `backend/`) | `.venv\Scripts\python.exe -m pytest tests/integration -v` |
 | 3 eilutės | `& "C:\Program Files\Git\usr\bin\perl.exe" node_modules\cloc\lib\cloc ../backend/app src` |
