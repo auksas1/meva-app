@@ -1,0 +1,1 @@
+{"zones": [{"label": "Scratch", "conf": 0.88, "box": [0.15, 0.2, 0.4, 0.45]}, {"label": "Dent", "conf": 0.74, "box": [0.55, 0.5, 0.8, 0.75]}], "delay": 0.5, "error": false}

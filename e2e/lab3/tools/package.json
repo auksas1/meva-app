@@ -1,0 +1,10 @@
+{
+  "name": "meva-lab3-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lab 3 accessibility tools (axe-core, Lighthouse)",
+  "dependencies": {
+    "axe-core": "^4.10.2",
+    "lighthouse": "^12.2.1"
+  }
+}

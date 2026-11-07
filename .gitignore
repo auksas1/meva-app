@@ -37,3 +37,7 @@ mobile/.stryker-tmp/
 .pytest_cache/
 # Lab 2 local scratch folder (5b refactoring examples, not part of the deliverable)
 mobile/refactor/
+# Lab 3 generated files: web build, measurement results, test images
+e2e/lab3/web/
+e2e/lab3/results/
+e2e/lab3/tools/data/
